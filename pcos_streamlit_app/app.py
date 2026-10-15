@@ -203,7 +203,7 @@ STYLE = """
     padding: 20px 16px; text-align: center; margin-top: 4px; }
 .pcos-waiting .ico { width: 54px; height: 54px; border-radius: 50%; margin: 0 auto 8px auto;
     display: flex; align-items: center; justify-content: center; font-size: 1.6rem;
-    background: linear-gradient(135deg, #14b8a6, #7c3aed); }
+    background: linear-gradient(135deg, #4f46e5, #7c3aed); }
 .pcos-waiting h3 { margin: 0 0 2px 0; padding: 0; font-size: 1.25rem; }
 .pcos-waiting p { margin: 0 0 12px 0; color: var(--muted); }
 .pcos-steps { display: flex; justify-content: center; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -211,7 +211,7 @@ STYLE = """
     border-radius: 999px; border: 1px solid var(--border); background: var(--card); font-weight: 600;
     font-size: 0.92rem; }
 .pcos-step i { font-style: normal; width: 22px; height: 22px; border-radius: 50%; color: #ffffff;
-    background: #0d9488; display: inline-flex; align-items: center; justify-content: center;
+    background: #4f46e5; display: inline-flex; align-items: center; justify-content: center;
     font-size: 0.8rem; }
 .pcos-arrow { opacity: 0.6; }
 .pcos-verdict { border-radius: 14px; padding: 18px 20px; font-size: 1.25rem; font-weight: 700; }
@@ -364,8 +364,8 @@ def load_model():
     return model
 
 
-LIGHT_VARS = ("#ffffff", "#f1f5f9", "#000000", "#f0fdfa", "#5eead4", "#ffffff", "#5b6b73", "#ccfbf1", "brightness(0)")
-DARK_VARS = ("#0b0f19", "#111827", "#ffffff", "#0f2f2d", "#2dd4bf", "#1b2433", "#a7d8d3", "#134e4a", "brightness(0) invert(1)")
+LIGHT_VARS = ("#ffffff", "#f1f5f9", "#000000", "#f5f3ff", "#c4b5fd", "#ffffff", "#6b6b8a", "#ede9fe", "brightness(0)")
+DARK_VARS = ("#0b0f19", "#111827", "#ffffff", "#1f2937", "#4b5563", "#1b2433", "#9ca3af", "#374151", "brightness(0) invert(1)")
 
 
 def _vars(v):
@@ -399,7 +399,7 @@ html {{ font-size: {scale}; }}
 [data-baseweb="input"], [data-testid="stNumberInputContainer"], .stApp [data-baseweb="select"] > div {{
     border: 1px solid var(--border) !important; border-radius: 10px !important; overflow: hidden; }}
 [data-baseweb="input"]:focus-within, [data-testid="stNumberInputContainer"]:focus-within {{
-    border-color: #0d9488 !important; box-shadow: 0 0 0 2px rgba(13,148,136,0.25); }}
+    border-color: #4f46e5 !important; box-shadow: 0 0 0 2px rgba(79,70,229,0.25); }}
 .stApp input {{ background: var(--field) !important; color: var(--fg) !important;
     -webkit-text-fill-color: var(--fg) !important; caret-color: var(--fg); }}
 .stApp input::placeholder {{ color: var(--muted) !important; -webkit-text-fill-color: var(--muted) !important; opacity: 1 !important; }}
@@ -443,16 +443,34 @@ def sidebar(text):
             unsafe_allow_html=True)
 
 
+PREF_KEYS = ("language", "theme", "text_size")
+PREF_DEFAULTS = {"language": "English", "theme": "System", "text_size": "Normal"}
+
+
+def remember_prefs():
+    saved = st.session_state.setdefault("_prefs", dict(PREF_DEFAULTS))
+    for key in PREF_KEYS:
+        if key in st.session_state:
+            saved[key] = st.session_state[key]
+
+
+def restore_prefs():
+    saved = st.session_state.setdefault("_prefs", dict(PREF_DEFAULTS))
+    for key in PREF_KEYS:
+        if key not in st.session_state:
+            st.session_state[key] = saved.get(key, PREF_DEFAULTS[key])
+
+
 def settings_popover(text):
     with st.popover("⚙️ Settings", use_container_width=True):
         st.markdown(f"**{text['language']}**")
-        st.radio("language_choice", list(LANGUAGES), key="language",
+        st.radio("language_choice", list(LANGUAGES), key="language", on_change=remember_prefs,
                  label_visibility="collapsed", format_func=lambda v: "🌐 " + v)
         st.markdown(f"**{text['theme']}**")
-        st.radio("theme_choice", ["System", "Light", "Dark"], key="theme",
+        st.radio("theme_choice", ["System", "Light", "Dark"], key="theme", on_change=remember_prefs,
                  label_visibility="collapsed", format_func=lambda v: text["theme_" + v])
         st.markdown(f"**{text['text_size']}**")
-        st.radio("size_choice", ["Normal", "Large"], key="text_size",
+        st.radio("size_choice", ["Normal", "Large"], key="text_size", on_change=remember_prefs,
                  label_visibility="collapsed", format_func=lambda v: text["size_" + v])
 
 
@@ -500,9 +518,7 @@ def main():
     st.set_page_config(page_title="PCOS Risk Screening", page_icon="🩺", layout="wide")
     st.markdown(STYLE, unsafe_allow_html=True)
 
-    st.session_state.setdefault("language", "English")
-    st.session_state.setdefault("theme", "System")
-    st.session_state.setdefault("text_size", "Normal")
+    restore_prefs()
     lang = LANGUAGES.get(st.session_state["language"], "en")
     text = TEXT[lang]
     apply_display_settings()
