@@ -60,6 +60,8 @@ TEXT = {
         "subtitle": "Research prototype — Random Forest with hybrid feature selection. "
                     "Not a diagnostic tool.",
         "settings": "Settings",
+        "wait_title": "Ready when you are",
+        "step1": "Enter details", "step2": "Press Predict", "step3": "See the result",
         "language": "Language",
         "theme": "Theme", "theme_System": "💻 System", "theme_Light": "☀️ Light", "theme_Dark": "🌙 Dark",
         "text_size": "Text size", "size_Normal": "Normal", "size_Large": "Large",
@@ -118,6 +120,8 @@ TEXT = {
         "subtitle": "একটি গবেষণা প্রোটোটাইপ — Random Forest ও Hybrid feature selection। "
                     "ক্লিনিক্যাল ডায়াগনসিস টুল নয়।",
         "settings": "সেটিংস",
+        "wait_title": "প্রস্তুত",
+        "step1": "তথ্য দিন", "step2": "Predict চাপুন", "step3": "ফলাফল দেখুন",
         "language": "ভাষা",
         "theme": "থিম", "theme_System": "💻 সিস্টেম", "theme_Light": "☀️ সাদা", "theme_Dark": "🌙 কালো",
         "text_size": "লেখার আকার", "size_Normal": "সাধারণ", "size_Large": "বড়",
@@ -195,10 +199,21 @@ STYLE = """
 .pcos-box p { margin: 0; font-size: 0.92rem; opacity: 1; line-height: 1.55; }
 .pcos-box.accent { border-left: 5px solid #7c3aed; }
 .pcos-box.warn { border-left: 5px solid #d97706; }
-.pcos-waiting {
-    border: 2px dashed rgba(124, 58, 237, 0.55); border-radius: 14px; padding: 26px 16px;
-    text-align: center; opacity: 0.85; margin-top: 8px;
-}
+.pcos-waiting { border: 1px solid var(--border); background: var(--field); border-radius: 14px;
+    padding: 20px 16px; text-align: center; margin-top: 4px; }
+.pcos-waiting .ico { width: 54px; height: 54px; border-radius: 50%; margin: 0 auto 8px auto;
+    display: flex; align-items: center; justify-content: center; font-size: 1.6rem;
+    background: linear-gradient(135deg, #14b8a6, #7c3aed); }
+.pcos-waiting h3 { margin: 0 0 2px 0; padding: 0; font-size: 1.25rem; }
+.pcos-waiting p { margin: 0 0 12px 0; color: var(--muted); }
+.pcos-steps { display: flex; justify-content: center; align-items: center; gap: 10px; flex-wrap: wrap; }
+.pcos-step { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px;
+    border-radius: 999px; border: 1px solid var(--border); background: var(--card); font-weight: 600;
+    font-size: 0.92rem; }
+.pcos-step i { font-style: normal; width: 22px; height: 22px; border-radius: 50%; color: #ffffff;
+    background: #0d9488; display: inline-flex; align-items: center; justify-content: center;
+    font-size: 0.8rem; }
+.pcos-arrow { opacity: 0.6; }
 .pcos-verdict { border-radius: 14px; padding: 18px 20px; font-size: 1.25rem; font-weight: 700; }
 .pcos-verdict small { display: block; font-weight: 400; font-size: 0.85rem; opacity: 0.85;
     margin-top: 4px; }
@@ -220,13 +235,20 @@ div[data-testid="stFormSubmitButton"] button {
     font-weight: 700; border-radius: 12px; padding: 0.6rem 1rem;
 }
 div[data-testid="stFormSubmitButton"] button:hover { filter: brightness(1.1); color: #ffffff; }
-[data-testid="stSidebarUserContent"] { padding-top: 0.4rem; }
+[data-testid="stSidebarHeader"] { height: 2.2rem; min-height: 0; padding: 0.3rem 0.8rem; }
+[data-testid="stSidebarUserContent"] { padding-top: 0; }
+[data-testid="stSidebar"] *, [data-testid="stSidebarContent"] { scrollbar-width: none; -ms-overflow-style: none; }
+[data-testid="stSidebar"] *::-webkit-scrollbar, [data-testid="stSidebarContent"]::-webkit-scrollbar { display: none; }
+[data-testid="stForm"] { border: none !important; padding: 0 !important; }
+[data-testid="stVerticalBlockBorderWrapper"] { border-radius: 12px; padding: 0.4rem 0.2rem 0.2rem 0.2rem; }
+.pcos-hero, .pcos-waiting, .pcos-box { width: 100%; box-sizing: border-box; }
 [data-testid="stMainBlockContainer"], .block-container { padding: 3.2rem 2.2rem 1rem 2.2rem; max-width: 1200px; }
 [data-testid="stVerticalBlock"] { gap: 0.6rem; }
 [data-testid="stSidebar"] .pcos-box { background: var(--card); border: 1px solid var(--border);
-    border-left-width: 4px; border-radius: 12px; padding: 14px 16px; margin-bottom: 14px;
+    border-left-width: 4px; border-radius: 12px; padding: 10px 14px; margin-bottom: 10px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.10); }
-[data-testid="stSidebar"] .pcos-box h4 { font-size: 1.02rem; margin: 0 0 8px 0; padding-bottom: 8px;
+[data-testid="stSidebar"] .pcos-box p { font-size: 0.84rem; line-height: 1.45; }
+[data-testid="stSidebar"] .pcos-box h4 { font-size: 0.98rem; margin: 0 0 6px 0; padding-bottom: 6px;
     border-bottom: 1px solid var(--border); }
 
 </style>
@@ -342,8 +364,8 @@ def load_model():
     return model
 
 
-LIGHT_VARS = ("#ffffff", "#f1f5f9", "#000000", "#ffffff", "#9ca3af", "#ffffff", "#6b7280", "#f3f4f6", "brightness(0)")
-DARK_VARS = ("#0b0f19", "#111827", "#ffffff", "#1f2937", "#6b7280", "#1b2433", "#cbd5e1", "#374151", "brightness(0) invert(1)")
+LIGHT_VARS = ("#ffffff", "#f1f5f9", "#000000", "#f0fdfa", "#5eead4", "#ffffff", "#5b6b73", "#ccfbf1", "brightness(0)")
+DARK_VARS = ("#0b0f19", "#111827", "#ffffff", "#0f2f2d", "#2dd4bf", "#1b2433", "#a7d8d3", "#134e4a", "brightness(0) invert(1)")
 
 
 def _vars(v):
@@ -377,16 +399,20 @@ html {{ font-size: {scale}; }}
 [data-baseweb="input"], [data-testid="stNumberInputContainer"], .stApp [data-baseweb="select"] > div {{
     border: 1px solid var(--border) !important; border-radius: 10px !important; overflow: hidden; }}
 [data-baseweb="input"]:focus-within, [data-testid="stNumberInputContainer"]:focus-within {{
-    border-color: #7c3aed !important; box-shadow: 0 0 0 2px rgba(124,58,237,0.25); }}
+    border-color: #0d9488 !important; box-shadow: 0 0 0 2px rgba(13,148,136,0.25); }}
 .stApp input {{ background: var(--field) !important; color: var(--fg) !important;
     -webkit-text-fill-color: var(--fg) !important; caret-color: var(--fg); }}
 .stApp input::placeholder {{ color: var(--muted) !important; -webkit-text-fill-color: var(--muted) !important; opacity: 1 !important; }}
 .stApp [data-baseweb="select"] * {{ color: var(--fg) !important; }}
+.stApp [data-baseweb="select"] div {{ background: var(--field) !important; }}
+.stApp [data-baseweb="select"] svg {{ fill: var(--fg) !important; }}
 .stApp [data-testid="stNumberInput"] button {{ background: var(--btn) !important; color: var(--fg) !important; border: none !important; }}
 .stApp [data-testid="stNumberInput"] button svg {{ fill: var(--fg) !important; }}
 [data-testid="stHeader"] button, [data-testid="stHeader"] a {{ color: var(--fg) !important; opacity: 1 !important; }}
-[data-testid="stHeader"] svg, [data-testid="stSidebarCollapseButton"] svg,
-[data-testid="stExpandSidebarButton"] svg {{ filter: var(--icon); opacity: 1 !important; }}
+[data-testid="stHeader"] svg {{ filter: var(--icon); opacity: 1 !important; }}
+[data-testid="stHeader"] span, [data-testid="stHeader"] [data-testid="stIconMaterial"],
+[data-testid="stSidebarCollapseButton"] *, [data-testid="stExpandSidebarButton"] * {{
+    color: var(--fg) !important; opacity: 1 !important; }}
 [data-testid="stPopover"] button {{
     background: var(--field) !important; color: var(--fg) !important;
     border: 1px solid var(--border) !important; border-radius: 10px !important;
@@ -419,12 +445,15 @@ def sidebar(text):
 
 def settings_popover(text):
     with st.popover("⚙️ Settings", use_container_width=True):
-        st.radio(text["language"], list(LANGUAGES), key="language",
-                 format_func=lambda v: "🌐 " + v)
-        st.radio(text["theme"], ["System", "Light", "Dark"], key="theme",
-                 format_func=lambda v: text["theme_" + v])
-        st.radio(text["text_size"], ["Normal", "Large"], key="text_size",
-                 format_func=lambda v: text["size_" + v])
+        st.markdown(f"**{text['language']}**")
+        st.radio("language_choice", list(LANGUAGES), key="language",
+                 label_visibility="collapsed", format_func=lambda v: "🌐 " + v)
+        st.markdown(f"**{text['theme']}**")
+        st.radio("theme_choice", ["System", "Light", "Dark"], key="theme",
+                 label_visibility="collapsed", format_func=lambda v: text["theme_" + v])
+        st.markdown(f"**{text['text_size']}**")
+        st.radio("size_choice", ["Normal", "Large"], key="text_size",
+                 label_visibility="collapsed", format_func=lambda v: text["size_" + v])
 
 
 def show_result(model, text, age, bmi, testosterone, follicle_count, menstrual, warnings):
@@ -521,8 +550,15 @@ def main():
     payload = st.session_state.get("last_inputs")
 
     if payload is None:
-        st.markdown(f'<div class="pcos-waiting">{text["waiting"]}</div>',
-                    unsafe_allow_html=True)
+        st.markdown(
+            f'<div class="pcos-waiting"><div class="ico">🩺</div>'
+            f'<h3>{text["wait_title"]}</h3><p>{text["waiting"]}</p>'
+            f'<div class="pcos-steps"><span class="pcos-step"><i>1</i>{text["step1"]}</span>'
+            f'<span class="pcos-arrow">→</span>'
+            f'<span class="pcos-step"><i>2</i>{text["step2"]}</span>'
+            f'<span class="pcos-arrow">→</span>'
+            f'<span class="pcos-step"><i>3</i>{text["step3"]}</span></div></div>',
+            unsafe_allow_html=True)
     else:
         errors, warnings, bmi = validate_inputs(
             payload["age"], payload["weight"], payload["height"], payload["testosterone"],
