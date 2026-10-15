@@ -220,8 +220,7 @@ div[data-testid="stFormSubmitButton"] button {
     font-weight: 700; border-radius: 12px; padding: 0.6rem 1rem;
 }
 div[data-testid="stFormSubmitButton"] button:hover { filter: brightness(1.1); color: #ffffff; }
-[data-testid="stSidebarHeader"] { height: 0.5rem; min-height: 0; padding: 0; }
-[data-testid="stSidebarUserContent"] { padding-top: 1.2rem; }
+[data-testid="stSidebarUserContent"] { padding-top: 0.4rem; }
 [data-testid="stMainBlockContainer"], .block-container { padding: 3.2rem 2.2rem 1rem 2.2rem; max-width: 1200px; }
 [data-testid="stVerticalBlock"] { gap: 0.6rem; }
 [data-testid="stSidebar"] .pcos-box { background: var(--card); border: 1px solid var(--border);
@@ -343,12 +342,12 @@ def load_model():
     return model
 
 
-LIGHT_VARS = ("#ffffff", "#f1f5f9", "#000000", "#ffffff", "#9ca3af", "#ffffff", "#4b5563", "#f3f4f6")
-DARK_VARS = ("#0b0f19", "#111827", "#ffffff", "#1f2937", "#6b7280", "#1b2433", "#d1d5db", "#374151")
+LIGHT_VARS = ("#ffffff", "#f1f5f9", "#000000", "#ffffff", "#9ca3af", "#ffffff", "#6b7280", "#f3f4f6", "brightness(0)")
+DARK_VARS = ("#0b0f19", "#111827", "#ffffff", "#1f2937", "#6b7280", "#1b2433", "#cbd5e1", "#374151", "brightness(0) invert(1)")
 
 
 def _vars(v):
-    names = ("bg", "side", "fg", "field", "border", "card", "muted", "btn")
+    names = ("bg", "side", "fg", "field", "border", "card", "muted", "btn", "icon")
     return "".join(f"--{n}:{x};" for n, x in zip(names, v))
 
 
@@ -371,20 +370,30 @@ html {{ font-size: {scale}; }}
 .stApp, [data-testid="stHeader"] {{ background: var(--bg); }}
 [data-testid="stSidebar"], [data-testid="stSidebar"] > div {{ background: var(--side); }}
 .stApp :is(p, label, span, li, h1, h2, h3, h4, h5, small, div[data-testid="stMarkdownContainer"]):not(.pcos-hero *):not(.pcos-verdict *):not(.pcos-pill):not(button *) {{ color: var(--fg); }}
-.stApp [data-baseweb="input"], .stApp [data-baseweb="input"] > div, .stApp [data-baseweb="input"] input,
+[data-baseweb="input"], [data-baseweb="base-input"], [data-baseweb="input"] > div,
+[data-baseweb="base-input"] > div, [data-testid="stNumberInputContainer"],
 .stApp [data-baseweb="select"] > div {{
-    background: var(--field); color: var(--fg); border-color: var(--border); }}
-.stApp [data-baseweb="input"], .stApp [data-baseweb="select"] > div {{ border: 1px solid var(--border); border-radius: 10px; }}
-.stApp input {{ -webkit-text-fill-color: var(--fg); caret-color: var(--fg); }}
-.stApp input::placeholder {{ color: var(--muted); -webkit-text-fill-color: var(--muted); opacity: 1; }}
-.stApp [data-testid="stNumberInput"] button {{ background: var(--btn); color: var(--fg); border: none; }}
-.stApp [data-testid="stNumberInput"] button svg {{ fill: var(--fg); }}
-[data-testid="stHeader"] :is(button, a, span, svg, svg *, [data-testid="stToolbarActionButtonIcon"]) {{
-    color: var(--fg) !important; fill: var(--fg) !important; opacity: 1 !important; }}
-[data-testid="stHeader"] svg path[stroke] {{ stroke: var(--fg) !important; }}
-[data-testid="stSidebar"] button[kind="secondary"], [data-testid="stPopover"] button {{
-    background: var(--field); color: var(--fg); border: 1px solid var(--border); font-weight: 600; }}
-[data-testid="stPopover"] button * {{ color: var(--fg); }}
+    background: var(--field) !important; color: var(--fg) !important; }}
+[data-baseweb="input"], [data-testid="stNumberInputContainer"], .stApp [data-baseweb="select"] > div {{
+    border: 1px solid var(--border) !important; border-radius: 10px !important; overflow: hidden; }}
+[data-baseweb="input"]:focus-within, [data-testid="stNumberInputContainer"]:focus-within {{
+    border-color: #7c3aed !important; box-shadow: 0 0 0 2px rgba(124,58,237,0.25); }}
+.stApp input {{ background: var(--field) !important; color: var(--fg) !important;
+    -webkit-text-fill-color: var(--fg) !important; caret-color: var(--fg); }}
+.stApp input::placeholder {{ color: var(--muted) !important; -webkit-text-fill-color: var(--muted) !important; opacity: 1 !important; }}
+.stApp [data-baseweb="select"] * {{ color: var(--fg) !important; }}
+.stApp [data-testid="stNumberInput"] button {{ background: var(--btn) !important; color: var(--fg) !important; border: none !important; }}
+.stApp [data-testid="stNumberInput"] button svg {{ fill: var(--fg) !important; }}
+[data-testid="stHeader"] button, [data-testid="stHeader"] a {{ color: var(--fg) !important; opacity: 1 !important; }}
+[data-testid="stHeader"] svg, [data-testid="stSidebarCollapseButton"] svg,
+[data-testid="stExpandSidebarButton"] svg {{ filter: var(--icon); opacity: 1 !important; }}
+[data-testid="stPopover"] button {{
+    background: var(--field) !important; color: var(--fg) !important;
+    border: 1px solid var(--border) !important; border-radius: 10px !important;
+    min-height: 3rem; padding: 0.5rem 1rem !important; }}
+[data-testid="stPopover"] button, [data-testid="stPopover"] button * {{
+    font-size: 1.2rem !important; font-weight: 700 !important; color: var(--fg) !important; }}
+[data-testid="stPopover"] button svg {{ width: 1.3rem; height: 1.3rem; }}
 [data-baseweb="popover"] > div, [data-baseweb="popover"] li, [data-baseweb="menu"] {{
     background: var(--field); color: var(--fg); }}
 [data-baseweb="popover"] :is(p, label, span, div) {{ color: var(--fg); }}"""
