@@ -28,17 +28,18 @@ HYBRID_FEATURES = [
     "Age",
 ]
 
-# Physiological limits: values outside are rejected.
+# Accepted input limits (wider than the dataset so more people can use the app).
+# Values outside the dataset range below are accepted but come with a reliability warning.
 HARD_LIMITS = {
-    "Age": (10.0, 80.0, "years"),
-    "Weight": (20.0, 300.0, "kg"),
-    "Height": (100.0, 230.0, "cm"),
-    "BMI": (10.0, 70.0, "kg/m²"),
-    "Testosterone": (1.0, 500.0, "ng/dL"),
-    "Antral follicle count": (0.0, 100.0, ""),
+    "Age": (12.0, 60.0, "years"),
+    "Weight": (25.0, 200.0, "kg"),
+    "Height": (120.0, 210.0, "cm"),
+    "BMI": (10.0, 60.0, "kg/m²"),
+    "Testosterone": (5.0, 200.0, "ng/dL"),
+    "Antral follicle count": (0.0, 60.0, ""),
 }
 
-# Range of the training data (Step 04 training split): values outside get a warning.
+# Range of the 4,000-record dataset: values outside get a warning.
 TRAINING_RANGE = {
     "Age": (18.0, 45.0, "years"),
     "BMI": (8.5, 44.7, "kg/m²"),
@@ -60,6 +61,8 @@ TEXT = {
                     "Not a diagnostic tool.",
         "settings": "Settings",
         "language": "Language",
+        "theme": "Theme", "theme_Light": "Light", "theme_Dark": "Dark",
+        "text_size": "Text size", "size_Normal": "Normal", "size_Large": "Large",
         "basic": "Basic information",
         "clinical": "Clinical information",
         "age": "Age (years)",
@@ -116,6 +119,8 @@ TEXT = {
                     "ক্লিনিক্যাল ডায়াগনসিস টুল নয়।",
         "settings": "সেটিংস",
         "language": "ভাষা",
+        "theme": "থিম", "theme_Light": "হালকা", "theme_Dark": "গাঢ়",
+        "text_size": "লেখার আকার", "size_Normal": "সাধারণ", "size_Large": "বড়",
         "basic": "মৌলিক তথ্য",
         "clinical": "ক্লিনিক্যাল তথ্য",
         "age": "বয়স (বছর)",
@@ -331,6 +336,33 @@ def load_model():
     return model
 
 
+THEME_CSS = {
+    "Light": ("#ffffff", "#f0f2f6", "#1f2937", "#ffffff", "#d1d5db"),
+    "Dark": ("#0e1117", "#262730", "#fafafa", "#1b1f2a", "#4b5563"),
+}
+
+
+def apply_display_settings():
+    theme = st.session_state.get("theme", "Light")
+    size = st.session_state.get("text_size", "Normal")
+    bg, side, fg, field, border = THEME_CSS.get(theme, THEME_CSS["Light"])
+    scale = "115%" if size == "Large" else "100%"
+    st.markdown(f"""<style>
+html {{ font-size: {scale}; }}
+[data-testid="stMain"], section.main, .stApp {{ scrollbar-width: none; -ms-overflow-style: none; }}
+[data-testid="stMain"]::-webkit-scrollbar, section.main::-webkit-scrollbar,
+.stApp::-webkit-scrollbar {{ display: none; }}
+.stApp, [data-testid="stHeader"] {{ background: {bg}; }}
+[data-testid="stSidebar"] {{ background: {side}; }}
+.stApp :is(p, label, span, li, h1, h2, h3, h4, h5, small, div[data-testid="stMarkdownContainer"]):not(.pcos-hero *):not(.pcos-verdict *) {{ color: {fg}; }}
+.stApp [data-baseweb="input"], .stApp [data-baseweb="input"] input,
+.stApp [data-baseweb="select"] > div, .stApp [data-testid="stNumberInput"] button {{
+    background: {field}; color: {fg}; border-color: {border}; }}
+.stApp [data-testid="stNumberInput"] button svg {{ fill: {fg}; }}
+.stApp [data-testid="stToolbar"] * {{ color: {fg}; }}
+</style>""", unsafe_allow_html=True)
+
+
 def pill(label):
     st.markdown(f'<span class="pcos-pill">{label}</span>', unsafe_allow_html=True)
 
@@ -339,9 +371,13 @@ def sidebar():
     with st.sidebar:
         current = st.session_state.get("language", "English")
         text = TEXT[LANGUAGES.get(current, "en")]
-        st.markdown(f"### ⚙️ {text['settings']}")
+        st.markdown("### ⚙️ Settings")
         choice = st.radio(text["language"], list(LANGUAGES), horizontal=True,
                           key="language")
+        st.radio(text["theme"], ["Light", "Dark"], horizontal=True, key="theme",
+                 format_func=lambda v: text["theme_" + v])
+        st.radio(text["text_size"], ["Normal", "Large"], horizontal=True, key="text_size",
+                 format_func=lambda v: text["size_" + v])
         st.markdown(
             f'<div class="pcos-box accent"><h4>ℹ️ {text["why_title"]}</h4>'
             f'<p>{text["why_body"]}</p></div>'
@@ -398,35 +434,42 @@ def main():
     st.markdown(STYLE, unsafe_allow_html=True)
 
     lang = sidebar()
+    apply_display_settings()
     text = TEXT[lang]
     model = load_model()
 
     st.markdown(
-        f'<div class="pcos-hero"><h1>🩺 {text["title"]}</h1><p>{text["subtitle"]}</p></div>',
+        f'<div class="pcos-hero"><h1>🩺 {TEXT["en"]["title"]}</h1><p>{text["subtitle"]}</p></div>',
         unsafe_allow_html=True)
 
     with st.form("patient_form"):
         with st.container(border=True):
             pill(text["basic"])
             col_age, col_weight, col_height = st.columns(3)
-            age = col_age.number_input(text["age"], value=None, step=1, format="%d",
-                                       placeholder="28", key="age")
-            weight = col_weight.number_input(text["weight"], value=None, step=0.1,
-                                             format="%.1f", placeholder="62.0", key="weight")
-            height = col_height.number_input(text["height"], value=None, step=0.1,
-                                             format="%.1f", placeholder="160.0", key="height")
+            a, w, h = (HARD_LIMITS[k] for k in ("Age", "Weight", "Height"))
+            age = col_age.number_input(
+                text["age"], value=None, min_value=int(a[0]), max_value=int(a[1]), step=1,
+                format="%d", placeholder=f"{a[0]:g}–{a[1]:g}", key="age")
+            weight = col_weight.number_input(
+                text["weight"], value=None, min_value=w[0], max_value=w[1], step=0.1,
+                format="%.1f", placeholder=f"{w[0]:g}–{w[1]:g}", key="weight")
+            height = col_height.number_input(
+                text["height"], value=None, min_value=h[0], max_value=h[1], step=0.1,
+                format="%.1f", placeholder=f"{h[0]:g}–{h[1]:g}", key="height")
         with st.container(border=True):
             pill(text["clinical"])
             col_cycle, col_testosterone, col_follicles = st.columns(3)
             menstrual = col_cycle.selectbox(
                 text["menstrual"], list(MENSTRUAL_CHOICES), index=None,
                 format_func=lambda key: text[key], placeholder=text["select"], key="menstrual")
+            t = HARD_LIMITS["Testosterone"]
+            f = HARD_LIMITS["Antral follicle count"]
             testosterone = col_testosterone.number_input(
-                text["testosterone"], value=None, step=0.1, format="%.1f",
-                placeholder="55.0", key="testosterone")
+                text["testosterone"], value=None, min_value=t[0], max_value=t[1], step=0.1,
+                format="%.1f", placeholder=f"{t[0]:g}–{t[1]:g}", key="testosterone")
             follicle_count = col_follicles.number_input(
-                text["afc"], value=None, step=1, format="%d", placeholder="14",
-                key="follicles")
+                text["afc"], value=None, min_value=int(f[0]), max_value=int(f[1]), step=1,
+                format="%d", placeholder=f"{f[0]:g}–{f[1]:g}", key="follicles")
         submitted = st.form_submit_button(text["predict"], use_container_width=True)
 
     entered = dict(age=age, weight=weight, height=height, testosterone=testosterone,
