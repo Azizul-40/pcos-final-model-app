@@ -62,7 +62,7 @@ TEXT = {
         "settings": "Settings",
         "language": "Language",
         "theme": "Theme", "theme_System": "💻 System", "theme_Light": "☀️ Light", "theme_Dark": "🌙 Dark",
-        "text_size": "Text size", "size_Normal": "A  Normal", "size_Large": "A+  Large",
+        "text_size": "Text size", "size_Normal": "Normal", "size_Large": "Large",
         "basic": "Basic information",
         "clinical": "Clinical information",
         "age": "Age (years)",
@@ -119,8 +119,8 @@ TEXT = {
                     "ক্লিনিক্যাল ডায়াগনসিস টুল নয়।",
         "settings": "সেটিংস",
         "language": "ভাষা",
-        "theme": "থিম", "theme_System": "💻 সিস্টেম", "theme_Light": "☀️ হালকা", "theme_Dark": "🌙 গাঢ়",
-        "text_size": "লেখার আকার", "size_Normal": "A  সাধারণ", "size_Large": "A+  বড়",
+        "theme": "থিম", "theme_System": "💻 সিস্টেম", "theme_Light": "☀️ সাদা", "theme_Dark": "🌙 কালো",
+        "text_size": "লেখার আকার", "size_Normal": "সাধারণ", "size_Large": "বড়",
         "basic": "মৌলিক তথ্য",
         "clinical": "ক্লিনিক্যাল তথ্য",
         "age": "বয়স (বছর)",
@@ -224,9 +224,12 @@ div[data-testid="stFormSubmitButton"] button:hover { filter: brightness(1.1); co
 [data-testid="stSidebarUserContent"] { padding-top: 1.2rem; }
 [data-testid="stMainBlockContainer"], .block-container { padding: 3.2rem 2.2rem 1rem 2.2rem; max-width: 1200px; }
 [data-testid="stVerticalBlock"] { gap: 0.6rem; }
-[data-testid="stSidebar"] .pcos-box { background: transparent; border: 1px solid rgba(127,127,127,0.35); }
-[data-testid="stSidebar"] .pcos-box h4 { font-size: 1.02rem; margin-bottom: 6px; }
-.pcos-settings-btn button { font-weight: 600; border-radius: 10px; width: 100%; }
+[data-testid="stSidebar"] .pcos-box { background: var(--card); border: 1px solid var(--border);
+    border-left-width: 4px; border-radius: 12px; padding: 14px 16px; margin-bottom: 14px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.10); }
+[data-testid="stSidebar"] .pcos-box h4 { font-size: 1.02rem; margin: 0 0 8px 0; padding-bottom: 8px;
+    border-bottom: 1px solid var(--border); }
+
 </style>
 """
 
@@ -340,36 +343,51 @@ def load_model():
     return model
 
 
-THEME_CSS = {
-    # page background, sidebar background, text, field background, border
-    "Light": ("#ffffff", "#f8fafc", "#000000", "#ffffff", "#9ca3af"),
-    "Dark": ("#0b0f19", "#111827", "#ffffff", "#1f2937", "#6b7280"),
-}
+LIGHT_VARS = ("#ffffff", "#f1f5f9", "#000000", "#ffffff", "#9ca3af", "#ffffff", "#4b5563", "#f3f4f6")
+DARK_VARS = ("#0b0f19", "#111827", "#ffffff", "#1f2937", "#6b7280", "#1b2433", "#d1d5db", "#374151")
+
+
+def _vars(v):
+    names = ("bg", "side", "fg", "field", "border", "card", "muted", "btn")
+    return "".join(f"--{n}:{x};" for n, x in zip(names, v))
 
 
 def apply_display_settings():
     theme = st.session_state.get("theme", "System")
     size = st.session_state.get("text_size", "Normal")
     scale = "115%" if size == "Large" else "100%"
-    css = f"""
+    if theme == "Dark":
+        root = f":root{{{_vars(DARK_VARS)}}}"
+    elif theme == "Light":
+        root = f":root{{{_vars(LIGHT_VARS)}}}"
+    else:
+        root = (f":root{{{_vars(LIGHT_VARS)}}}"
+                f"@media (prefers-color-scheme: dark){{:root{{{_vars(DARK_VARS)}}}}}")
+    css = root + f"""
 html {{ font-size: {scale}; }}
 [data-testid="stMain"], section.main, .stApp {{ scrollbar-width: none; -ms-overflow-style: none; }}
 [data-testid="stMain"]::-webkit-scrollbar, section.main::-webkit-scrollbar,
-.stApp::-webkit-scrollbar {{ display: none; }}"""
-    if theme in THEME_CSS:
-        bg, side, fg, field, border = THEME_CSS[theme]
-        css += f"""
-.stApp, [data-testid="stHeader"] {{ background: {bg}; }}
-[data-testid="stSidebar"] {{ background: {side}; }}
-.stApp :is(p, label, span, li, h1, h2, h3, h4, h5, small, div[data-testid="stMarkdownContainer"]):not(.pcos-hero *):not(.pcos-verdict *):not(.pcos-pill):not(button *) {{ color: {fg}; }}
-.stApp [data-baseweb="input"], .stApp [data-baseweb="input"] input,
-.stApp [data-baseweb="select"] > div, .stApp [data-testid="stNumberInput"] button {{
-    background: {field}; color: {fg}; border-color: {border}; }}
-.stApp [data-testid="stNumberInput"] button svg {{ fill: {fg}; }}
-.stApp [data-testid="stToolbar"] * {{ color: {fg}; }}
+.stApp::-webkit-scrollbar {{ display: none; }}
+.stApp, [data-testid="stHeader"] {{ background: var(--bg); }}
+[data-testid="stSidebar"], [data-testid="stSidebar"] > div {{ background: var(--side); }}
+.stApp :is(p, label, span, li, h1, h2, h3, h4, h5, small, div[data-testid="stMarkdownContainer"]):not(.pcos-hero *):not(.pcos-verdict *):not(.pcos-pill):not(button *) {{ color: var(--fg); }}
+.stApp [data-baseweb="input"], .stApp [data-baseweb="input"] > div, .stApp [data-baseweb="input"] input,
+.stApp [data-baseweb="select"] > div {{
+    background: var(--field); color: var(--fg); border-color: var(--border); }}
+.stApp [data-baseweb="input"], .stApp [data-baseweb="select"] > div {{ border: 1px solid var(--border); border-radius: 10px; }}
+.stApp input {{ -webkit-text-fill-color: var(--fg); caret-color: var(--fg); }}
+.stApp input::placeholder {{ color: var(--muted); -webkit-text-fill-color: var(--muted); opacity: 1; }}
+.stApp [data-testid="stNumberInput"] button {{ background: var(--btn); color: var(--fg); border: none; }}
+.stApp [data-testid="stNumberInput"] button svg {{ fill: var(--fg); }}
+[data-testid="stHeader"] :is(button, a, span, svg, svg *, [data-testid="stToolbarActionButtonIcon"]) {{
+    color: var(--fg) !important; fill: var(--fg) !important; opacity: 1 !important; }}
+[data-testid="stHeader"] svg path[stroke] {{ stroke: var(--fg) !important; }}
+[data-testid="stSidebar"] button[kind="secondary"], [data-testid="stPopover"] button {{
+    background: var(--field); color: var(--fg); border: 1px solid var(--border); font-weight: 600; }}
+[data-testid="stPopover"] button * {{ color: var(--fg); }}
 [data-baseweb="popover"] > div, [data-baseweb="popover"] li, [data-baseweb="menu"] {{
-    background: {field}; color: {fg}; }}
-[data-baseweb="popover"] :is(p, label, span, div) {{ color: {fg}; }}"""
+    background: var(--field); color: var(--fg); }}
+[data-baseweb="popover"] :is(p, label, span, div) {{ color: var(--fg); }}"""
     st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
 
 
@@ -379,6 +397,7 @@ def pill(label):
 
 def sidebar(text):
     with st.sidebar:
+        settings_popover(text)
         st.markdown(
             f'<div class="pcos-box accent"><h4>ℹ️ {text["why_title"]}</h4>'
             f'<p>{text["why_body"]}</p></div>'
@@ -443,18 +462,18 @@ def main():
     st.set_page_config(page_title="PCOS Risk Screening", page_icon="🩺", layout="wide")
     st.markdown(STYLE, unsafe_allow_html=True)
 
-    lang = LANGUAGES.get(st.session_state.get("language", "English"), "en")
+    st.session_state.setdefault("language", "English")
+    st.session_state.setdefault("theme", "System")
+    st.session_state.setdefault("text_size", "Normal")
+    lang = LANGUAGES.get(st.session_state["language"], "en")
     text = TEXT[lang]
     apply_display_settings()
     sidebar(text)
     model = load_model()
 
-    head, gear = st.columns([6, 1], vertical_alignment="center")
-    head.markdown(
+    st.markdown(
         f'<div class="pcos-hero"><h1>🩺 {TEXT["en"]["title"]}</h1><p>{text["subtitle"]}</p></div>',
         unsafe_allow_html=True)
-    with gear:
-        settings_popover(text)
 
     with st.form("patient_form"):
         with st.container(border=True):
