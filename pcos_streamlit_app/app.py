@@ -61,6 +61,12 @@ TEXT = {
                     "Not a diagnostic tool.",
         "settings": "Settings",
         "wait_title": "Ready when you are",
+        "guide_title": "Risk guide",
+        "band1": "Low likelihood of PCOS", "band2": "Medium likelihood of PCOS",
+        "band3": "High likelihood of PCOS",
+        "lean_pos": "The model leans towards PCOS.",
+        "lean_neg": "The model leans towards no PCOS.",
+        "guide_note": "In the medium range the model is unsure; a clinical assessment is needed.",
         "step1": "Enter details", "step2": "Press Predict", "step3": "See the result",
         "language": "Language",
         "theme": "Theme", "theme_System": "💻 System", "theme_Light": "☀️ Light", "theme_Dark": "🌙 Dark",
@@ -123,6 +129,12 @@ TEXT = {
                     "ক্লিনিক্যাল ডায়াগনসিস টুল নয়।",
         "settings": "সেটিংস",
         "wait_title": "প্রস্তুত",
+        "guide_title": "ঝুঁকির নির্দেশিকা",
+        "band1": "PCOS-এর ঝুঁকি কম", "band2": "PCOS-এর ঝুঁকি মাঝারি",
+        "band3": "PCOS-এর ঝুঁকি বেশি",
+        "lean_pos": "মডেল PCOS-এর দিকে ঝুঁকছে।",
+        "lean_neg": "মডেল PCOS না হওয়ার দিকে ঝুঁকছে।",
+        "guide_note": "মাঝারি ধাপে মডেল নিজেই নিশ্চিত নয়; ক্লিনিক্যাল মূল্যায়ন প্রয়োজন।",
         "step1": "তথ্য দিন", "step2": "Predict চাপুন", "step3": "ফলাফল দেখুন",
         "language": "ভাষা",
         "theme": "থিম", "theme_System": "💻 সিস্টেম", "theme_Light": "☀️ সাদা", "theme_Dark": "🌙 কালো",
@@ -223,6 +235,9 @@ STYLE = """
     margin-top: 4px; }
 .pcos-verdict.low { background: rgba(5, 150, 105, 0.16); border: 1px solid #059669; }
 .pcos-verdict.high { background: rgba(225, 29, 72, 0.14); border: 1px solid #e11d48; }
+.pcos-guide-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; font-size: 0.84rem; }
+.pcos-guide-row b { min-width: 64px; }
+.pcos-swatch { width: 34px; height: 16px; border-radius: 5px; flex: none; }
 .pcos-prob { font-size: 2.1rem; font-weight: 700; line-height: 1.1; }
 .pcos-result { display: grid; grid-template-columns: 2fr 3fr; gap: 12px; align-items: stretch;
     margin: 4px 0 12px 0; }
@@ -361,7 +376,7 @@ def predict(model, age, bmi, testosterone, follicle_count, menstrual):
 
 def describe(probability):
     positive = probability >= DECISION_THRESHOLD
-    uncertain = UNCERTAIN_BAND[0] <= probability <= UNCERTAIN_BAND[1]
+    uncertain = 35 <= round(probability * 100) <= 65
     return positive, uncertain
 
 
@@ -445,10 +460,35 @@ def pill(label):
     st.markdown(f'<span class="pcos-pill">{label}</span>', unsafe_allow_html=True)
 
 
+BANDS = ((0, 34, 17), (35, 65, 50), (66, 100, 83))
+
+
+def risk_band(probability):
+    """1 = low (0-34%), 2 = medium (35-65%), 3 = high (66-100%)."""
+    percent = round(probability * 100)
+    if percent < 35:
+        return 1
+    if percent <= 65:
+        return 2
+    return 3
+
+
+def risk_guide_html(text):
+    rows = ""
+    for number, (low, high, middle) in enumerate(BANDS, start=1):
+        background, border = risk_style(middle)
+        rows += (f'<div class="pcos-guide-row"><span class="pcos-swatch" '
+                 f'style="background:{background};border:1px solid {border}"></span>'
+                 f'<b>{low}–{high}%</b><span>{text["band" + str(number)]}</span></div>')
+    return (f'<div class="pcos-box accent"><h4>🎯 {text["guide_title"]}</h4>{rows}'
+            f'<p>{text["guide_note"]}</p></div>')
+
+
 def sidebar(text, lang):
     with st.sidebar:
         settings_popover(text, lang)
         st.markdown(
+            risk_guide_html(text) +
             f'<div class="pcos-box accent"><h4>ℹ️ {text["why_title"]}</h4>'
             f'<p>{text["why_body"]}</p></div>'
             f'<div class="pcos-box accent"><h4>📦 {text["data_title"]}</h4>'
@@ -520,10 +560,13 @@ def show_result(model, text, age, bmi, testosterone, follicle_count, menstrual, 
         st.warning("\n\n".join(notes))
 
     percent = probability * 100.0
-    icon = "⚠️" if positive else "✅"
-    verdict_text = text["high"] if positive else text["low"]
+    band = risk_band(probability)
+    icon = "✅" if band == 1 else "⚠️"
+    verdict_text = text["band" + str(band)]
     background, border = risk_style(percent)
     votes = text["agreement"].format(n=len(model.estimators_), pct=f"{agreement * 100:.0f}")
+    if band == 2:
+        votes = (text["lean_pos"] if positive else text["lean_neg"]) + "<br>" + votes
     marker = min(max(percent, 1.0), 99.0)
 
     st.markdown(
