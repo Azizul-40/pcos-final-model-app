@@ -61,8 +61,8 @@ TEXT = {
                     "Not a diagnostic tool.",
         "settings": "Settings",
         "language": "Language",
-        "theme": "Theme", "theme_Light": "Light", "theme_Dark": "Dark",
-        "text_size": "Text size", "size_Normal": "Normal", "size_Large": "Large",
+        "theme": "Theme", "theme_System": "💻 System", "theme_Light": "☀️ Light", "theme_Dark": "🌙 Dark",
+        "text_size": "Text size", "size_Normal": "A  Normal", "size_Large": "A+  Large",
         "basic": "Basic information",
         "clinical": "Clinical information",
         "age": "Age (years)",
@@ -119,8 +119,8 @@ TEXT = {
                     "ক্লিনিক্যাল ডায়াগনসিস টুল নয়।",
         "settings": "সেটিংস",
         "language": "ভাষা",
-        "theme": "থিম", "theme_Light": "হালকা", "theme_Dark": "গাঢ়",
-        "text_size": "লেখার আকার", "size_Normal": "সাধারণ", "size_Large": "বড়",
+        "theme": "থিম", "theme_System": "💻 সিস্টেম", "theme_Light": "☀️ হালকা", "theme_Dark": "🌙 গাঢ়",
+        "text_size": "লেখার আকার", "size_Normal": "A  সাধারণ", "size_Large": "A+  বড়",
         "basic": "মৌলিক তথ্য",
         "clinical": "ক্লিনিক্যাল তথ্য",
         "age": "বয়স (বছর)",
@@ -178,10 +178,10 @@ STYLE = """
 .stApp { font-family: 'Hind Siliguri', 'Source Sans Pro', sans-serif; }
 .pcos-hero {
     background: linear-gradient(120deg, #4338ca 0%, #7c3aed 55%, #c026d3 100%);
-    color: #ffffff; padding: 22px 26px; border-radius: 16px; margin-bottom: 14px;
+    color: #ffffff; padding: 16px 24px; border-radius: 14px; margin-bottom: 6px;
 }
-.pcos-hero h1 { color: #ffffff; margin: 0 0 4px 0; padding: 0; font-size: 1.9rem; }
-.pcos-hero p { margin: 0; opacity: 0.92; font-size: 0.98rem; }
+.pcos-hero h1 { color: #ffffff; margin: 0 0 2px 0; padding: 0; font-size: 1.6rem; }
+.pcos-hero p { margin: 0; opacity: 1; font-size: 0.95rem; }
 .pcos-pill {
     display: inline-block; padding: 3px 14px; border-radius: 999px; margin-bottom: 6px;
     background: linear-gradient(120deg, #4f46e5, #9333ea); color: #ffffff;
@@ -192,7 +192,7 @@ STYLE = """
     background: rgba(127, 127, 127, 0.10); border: 1px solid rgba(127, 127, 127, 0.28);
 }
 .pcos-box h4 { margin: 0 0 6px 0; font-size: 1rem; }
-.pcos-box p { margin: 0; font-size: 0.9rem; opacity: 0.88; line-height: 1.5; }
+.pcos-box p { margin: 0; font-size: 0.92rem; opacity: 1; line-height: 1.55; }
 .pcos-box.accent { border-left: 5px solid #7c3aed; }
 .pcos-box.warn { border-left: 5px solid #d97706; }
 .pcos-waiting {
@@ -221,8 +221,12 @@ div[data-testid="stFormSubmitButton"] button {
 }
 div[data-testid="stFormSubmitButton"] button:hover { filter: brightness(1.1); color: #ffffff; }
 [data-testid="stSidebarHeader"] { height: 0.5rem; min-height: 0; padding: 0; }
-[data-testid="stSidebarUserContent"] { padding-top: 0.5rem; }
-[data-testid="stSidebar"] h3 { margin-top: 0; padding-top: 0; }
+[data-testid="stSidebarUserContent"] { padding-top: 1.2rem; }
+[data-testid="stMainBlockContainer"], .block-container { padding: 3.2rem 2.2rem 1rem 2.2rem; max-width: 1200px; }
+[data-testid="stVerticalBlock"] { gap: 0.6rem; }
+[data-testid="stSidebar"] .pcos-box { background: transparent; border: 1px solid rgba(127,127,127,0.35); }
+[data-testid="stSidebar"] .pcos-box h4 { font-size: 1.02rem; margin-bottom: 6px; }
+.pcos-settings-btn button { font-weight: 600; border-radius: 10px; width: 100%; }
 </style>
 """
 
@@ -337,47 +341,44 @@ def load_model():
 
 
 THEME_CSS = {
-    "Light": ("#ffffff", "#f0f2f6", "#1f2937", "#ffffff", "#d1d5db"),
-    "Dark": ("#0e1117", "#262730", "#fafafa", "#1b1f2a", "#4b5563"),
+    # page background, sidebar background, text, field background, border
+    "Light": ("#ffffff", "#f8fafc", "#000000", "#ffffff", "#9ca3af"),
+    "Dark": ("#0b0f19", "#111827", "#ffffff", "#1f2937", "#6b7280"),
 }
 
 
 def apply_display_settings():
-    theme = st.session_state.get("theme", "Light")
+    theme = st.session_state.get("theme", "System")
     size = st.session_state.get("text_size", "Normal")
-    bg, side, fg, field, border = THEME_CSS.get(theme, THEME_CSS["Light"])
     scale = "115%" if size == "Large" else "100%"
-    st.markdown(f"""<style>
+    css = f"""
 html {{ font-size: {scale}; }}
 [data-testid="stMain"], section.main, .stApp {{ scrollbar-width: none; -ms-overflow-style: none; }}
 [data-testid="stMain"]::-webkit-scrollbar, section.main::-webkit-scrollbar,
-.stApp::-webkit-scrollbar {{ display: none; }}
+.stApp::-webkit-scrollbar {{ display: none; }}"""
+    if theme in THEME_CSS:
+        bg, side, fg, field, border = THEME_CSS[theme]
+        css += f"""
 .stApp, [data-testid="stHeader"] {{ background: {bg}; }}
 [data-testid="stSidebar"] {{ background: {side}; }}
-.stApp :is(p, label, span, li, h1, h2, h3, h4, h5, small, div[data-testid="stMarkdownContainer"]):not(.pcos-hero *):not(.pcos-verdict *) {{ color: {fg}; }}
+.stApp :is(p, label, span, li, h1, h2, h3, h4, h5, small, div[data-testid="stMarkdownContainer"]):not(.pcos-hero *):not(.pcos-verdict *):not(.pcos-pill):not(button *) {{ color: {fg}; }}
 .stApp [data-baseweb="input"], .stApp [data-baseweb="input"] input,
 .stApp [data-baseweb="select"] > div, .stApp [data-testid="stNumberInput"] button {{
     background: {field}; color: {fg}; border-color: {border}; }}
 .stApp [data-testid="stNumberInput"] button svg {{ fill: {fg}; }}
 .stApp [data-testid="stToolbar"] * {{ color: {fg}; }}
-</style>""", unsafe_allow_html=True)
+[data-baseweb="popover"] > div, [data-baseweb="popover"] li, [data-baseweb="menu"] {{
+    background: {field}; color: {fg}; }}
+[data-baseweb="popover"] :is(p, label, span, div) {{ color: {fg}; }}"""
+    st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
 
 
 def pill(label):
     st.markdown(f'<span class="pcos-pill">{label}</span>', unsafe_allow_html=True)
 
 
-def sidebar():
+def sidebar(text):
     with st.sidebar:
-        current = st.session_state.get("language", "English")
-        text = TEXT[LANGUAGES.get(current, "en")]
-        st.markdown("### ⚙️ Settings")
-        choice = st.radio(text["language"], list(LANGUAGES), horizontal=True,
-                          key="language")
-        st.radio(text["theme"], ["Light", "Dark"], horizontal=True, key="theme",
-                 format_func=lambda v: text["theme_" + v])
-        st.radio(text["text_size"], ["Normal", "Large"], horizontal=True, key="text_size",
-                 format_func=lambda v: text["size_" + v])
         st.markdown(
             f'<div class="pcos-box accent"><h4>ℹ️ {text["why_title"]}</h4>'
             f'<p>{text["why_body"]}</p></div>'
@@ -386,7 +387,16 @@ def sidebar():
             f'<div class="pcos-box warn"><h4>⚠️ {text["disclaimer_title"]}</h4>'
             f'<p>{text["disclaimer_body"]}</p></div>',
             unsafe_allow_html=True)
-    return LANGUAGES[choice]
+
+
+def settings_popover(text):
+    with st.popover("⚙️ Settings", use_container_width=True):
+        st.radio(text["language"], list(LANGUAGES), key="language",
+                 format_func=lambda v: "🌐 " + v)
+        st.radio(text["theme"], ["System", "Light", "Dark"], key="theme",
+                 format_func=lambda v: text["theme_" + v])
+        st.radio(text["text_size"], ["Normal", "Large"], key="text_size",
+                 format_func=lambda v: text["size_" + v])
 
 
 def show_result(model, text, age, bmi, testosterone, follicle_count, menstrual, warnings):
@@ -433,14 +443,18 @@ def main():
     st.set_page_config(page_title="PCOS Risk Screening", page_icon="🩺", layout="wide")
     st.markdown(STYLE, unsafe_allow_html=True)
 
-    lang = sidebar()
-    apply_display_settings()
+    lang = LANGUAGES.get(st.session_state.get("language", "English"), "en")
     text = TEXT[lang]
+    apply_display_settings()
+    sidebar(text)
     model = load_model()
 
-    st.markdown(
+    head, gear = st.columns([6, 1], vertical_alignment="center")
+    head.markdown(
         f'<div class="pcos-hero"><h1>🩺 {TEXT["en"]["title"]}</h1><p>{text["subtitle"]}</p></div>',
         unsafe_allow_html=True)
+    with gear:
+        settings_popover(text)
 
     with st.form("patient_form"):
         with st.container(border=True):
