@@ -106,6 +106,8 @@ TEXT = {
         "range": "{field} must be between {low} and {high} {unit} (entered {value}).",
         "bmi_bad": "The weight and height give a BMI of {bmi} {unit}, which is outside the "
                    "plausible range {low}–{high}. Check weight and height.",
+        "train_item": "{field} {value} (training range {low}–{high})",
+        "train_all": "Outside the range seen in training: {items}. The prediction is less reliable.",
         "train_warn": "{field} ({value}) is outside the range seen in training ({low}–{high}). "
                       "The prediction is less reliable.",
         "fields": {"Age": "Age", "Weight": "Weight", "Height": "Height",
@@ -166,6 +168,8 @@ TEXT = {
         "range": "{field} অবশ্যই {low}–{high} {unit}-এর মধ্যে হতে হবে (দেওয়া হয়েছে {value})।",
         "bmi_bad": "ওজন ও উচ্চতা থেকে BMI {bmi} {unit} হয়েছে, যা সম্ভাব্য সীমা {low}–{high}-এর "
                    "বাইরে। ওজন ও উচ্চতা যাচাই করুন।",
+        "train_item": "{field} {value} (training সীমা {low}–{high})",
+        "train_all": "Training ডেটার সীমার বাইরে: {items}। পূর্বাভাস কম নির্ভরযোগ্য।",
         "train_warn": "{field} ({value}) training ডেটার সীমার ({low}–{high}) বাইরে। পূর্বাভাস কম "
                       "নির্ভরযোগ্য।",
         "fields": {"Age": "বয়স", "Weight": "ওজন", "Height": "উচ্চতা",
@@ -220,6 +224,13 @@ STYLE = """
 .pcos-verdict.low { background: rgba(5, 150, 105, 0.16); border: 1px solid #059669; }
 .pcos-verdict.high { background: rgba(225, 29, 72, 0.14); border: 1px solid #e11d48; }
 .pcos-prob { font-size: 2.1rem; font-weight: 700; line-height: 1.1; }
+.pcos-result { display: grid; grid-template-columns: 2fr 3fr; gap: 12px; align-items: stretch;
+    margin: 4px 0 12px 0; }
+.pcos-result > div { margin: 0; height: 100%; box-sizing: border-box; }
+.pcos-tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 0 0 12px 0; }
+.pcos-tiles .pcos-tile { box-sizing: border-box; min-height: 74px; }
+.pcos-verdict, .pcos-verdict * { color: var(--fg); }
+@media (max-width: 760px) { .pcos-result, .pcos-tiles { grid-template-columns: 1fr; } }
 .pcos-gauge { position: relative; height: 14px; border-radius: 999px; margin: 14px 0 6px 0;
     background: linear-gradient(90deg, #10b981 0%, #f59e0b 50%, #e11d48 100%); }
 .pcos-marker { position: absolute; top: -5px; width: 6px; height: 24px; border-radius: 3px;
@@ -333,7 +344,7 @@ def validate_inputs(age, weight, height, testosterone, follicle_count, menstrual
     for label, value in checks:
         low, high, unit = TRAINING_RANGE[label]
         if not low <= value <= high:
-            warnings.append(text["train_warn"].format(
+            warnings.append(text["train_item"].format(
                 field=names[label], value=f"{value:g}", low=f"{low:g}", high=f"{high:g}"))
     return errors, warnings, bmi
 
@@ -482,6 +493,17 @@ def settings_popover(text, lang):
                  label_visibility="collapsed", format_func=lambda v: text["size_" + v])
 
 
+def risk_style(percent):
+    """Colours that follow the probability: green (low) through amber to red (high)."""
+    p = min(max(percent, 0.0), 100.0)
+    hue = 140.0 - 100.0 * (p / 50.0) if p <= 50.0 else 40.0 - 40.0 * ((p - 50.0) / 50.0)
+    hue2 = max(hue - 25.0, -5.0)
+    background = (f"linear-gradient(120deg, hsla({hue:.0f},75%,45%,0.34), "
+                  f"hsla({hue2:.0f},75%,45%,0.10))")
+    border = f"hsl({hue:.0f},70%,42%)"
+    return background, border
+
+
 def show_result(model, text, age, bmi, testosterone, follicle_count, menstrual, warnings):
     started = time.perf_counter()
     probability, agreement = predict(model, age, bmi, testosterone, follicle_count, menstrual)
@@ -489,37 +511,37 @@ def show_result(model, text, age, bmi, testosterone, follicle_count, menstrual, 
     positive, uncertain = describe(probability)
 
     st.info(f"{text['bmi']}: {bmi:.1f} kg/m²")
-    for message in warnings:
-        st.warning(message)
+    notes = []
+    if warnings:
+        notes.append(text["train_all"].format(items="; ".join(warnings)))
+    if uncertain:
+        notes.append(text["uncertain"])
+    if notes:
+        st.warning("\n\n".join(notes))
 
     percent = probability * 100.0
-    verdict_class = "high" if positive else "low"
     icon = "⚠️" if positive else "✅"
     verdict_text = text["high"] if positive else text["low"]
+    background, border = risk_style(percent)
+    votes = text["agreement"].format(n=len(model.estimators_), pct=f"{agreement * 100:.0f}")
+    marker = min(max(percent, 1.0), 99.0)
 
-    left, right = st.columns([2, 3])
-    left.markdown(
-        f'<div class="pcos-verdict {verdict_class}">{icon} {verdict_text}'
-        f'<small>{text["agreement"].format(n=len(model.estimators_), pct=f"{agreement * 100:.0f}")}'
-        f'</small></div>', unsafe_allow_html=True)
-    right.markdown(
+    st.markdown(
+        f'<div class="pcos-result">'
+        f'<div class="pcos-verdict" style="background:{background};border:1px solid {border}">'
+        f'{icon} {verdict_text}<small>{votes}</small></div>'
         f'<div class="pcos-box"><span>{text["estimate"]}</span>'
         f'<div class="pcos-prob">{percent:.1f}%</div>'
         f'<div class="pcos-gauge"><div class="pcos-tick" style="left:'
         f'{DECISION_THRESHOLD * 100:.0f}%"></div>'
-        f'<div class="pcos-marker" style="left:{min(max(percent, 1.0), 99.0):.1f}%"></div></div>'
-        f'<p>{text["threshold_note"]}</p></div>', unsafe_allow_html=True)
-
-    tiles = st.columns(3)
-    tile_values = [(text["tile_model"], "Random Forest"),
-                   (text["tile_time"], f"{elapsed_ms:.1f} ms"),
-                   (text["tile_features"], str(len(HYBRID_FEATURES)))]
-    for column, (label, value) in zip(tiles, tile_values):
-        column.markdown(f'<div class="pcos-tile"><span>{label}</span><b>{value}</b></div>',
-                        unsafe_allow_html=True)
-
-    if uncertain:
-        st.warning(text["uncertain"])
+        f'<div class="pcos-marker" style="left:{marker:.1f}%"></div></div>'
+        f'<p>{text["threshold_note"]}</p></div></div>'
+        f'<div class="pcos-tiles">'
+        f'<div class="pcos-tile"><span>{text["tile_model"]}</span><b>Random Forest</b></div>'
+        f'<div class="pcos-tile"><span>{text["tile_time"]}</span><b>{elapsed_ms:.1f} ms</b></div>'
+        f'<div class="pcos-tile"><span>{text["tile_features"]}</span>'
+        f'<b>{len(HYBRID_FEATURES)}</b></div></div>',
+        unsafe_allow_html=True)
 
 
 def main():
