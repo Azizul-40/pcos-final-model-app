@@ -374,8 +374,8 @@ def _vars(v):
 
 
 def apply_display_settings():
-    theme = st.session_state.get("theme", "System")
-    size = st.session_state.get("text_size", "Normal")
+    theme = prefs()["theme"]
+    size = prefs()["text_size"]
     scale = "115%" if size == "Large" else "100%"
     if theme == "Dark":
         root = f":root{{{_vars(DARK_VARS)}}}"
@@ -408,11 +408,10 @@ html {{ font-size: {scale}; }}
 .stApp [data-baseweb="select"] svg {{ fill: var(--fg) !important; }}
 .stApp [data-testid="stNumberInput"] button {{ background: var(--btn) !important; color: var(--fg) !important; border: none !important; }}
 .stApp [data-testid="stNumberInput"] button svg {{ fill: var(--fg) !important; }}
-[data-testid="stHeader"] button, [data-testid="stHeader"] a {{ color: var(--fg) !important; opacity: 1 !important; }}
-[data-testid="stHeader"] svg {{ filter: var(--icon); opacity: 1 !important; }}
-[data-testid="stHeader"] span, [data-testid="stHeader"] [data-testid="stIconMaterial"],
-[data-testid="stSidebarCollapseButton"] *, [data-testid="stExpandSidebarButton"] * {{
-    color: var(--fg) !important; opacity: 1 !important; }}
+[data-testid="stToolbar"], [data-testid="stSidebarCollapseButton"],
+[data-testid="stExpandSidebarButton"] {{ filter: var(--icon); }}
+[data-testid="stToolbar"] *, [data-testid="stSidebarCollapseButton"] *,
+[data-testid="stExpandSidebarButton"] * {{ color: #000000 !important; opacity: 1 !important; }}
 [data-testid="stPopover"] button {{
     background: var(--field) !important; color: var(--fg) !important;
     border: 1px solid var(--border) !important; border-radius: 10px !important;
@@ -421,7 +420,12 @@ html {{ font-size: {scale}; }}
     font-size: 1.2rem !important; font-weight: 700 !important; color: var(--fg) !important; }}
 [data-testid="stPopover"] button svg {{ width: 1.3rem; height: 1.3rem; }}
 [data-baseweb="popover"] > div, [data-baseweb="popover"] li, [data-baseweb="menu"] {{
-    background: var(--field); color: var(--fg); }}
+    background: var(--card); color: var(--fg); }}
+[data-testid="stPopoverBody"] {{ background: var(--card) !important;
+    border: 1px solid var(--border) !important; border-radius: 12px !important; }}
+[data-testid="stPopoverBody"], [data-testid="stPopoverBody"] * {{ color: var(--fg) !important; }}
+[data-testid="stPopoverBody"] [data-baseweb="radio"]:has(input:not(:checked)) > div:first-child {{
+    background: transparent !important; border-color: var(--muted) !important; }}
 [data-baseweb="popover"] :is(p, label, span, div) {{ color: var(--fg); }}"""
     st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
 
@@ -430,9 +434,9 @@ def pill(label):
     st.markdown(f'<span class="pcos-pill">{label}</span>', unsafe_allow_html=True)
 
 
-def sidebar(text):
+def sidebar(text, lang):
     with st.sidebar:
-        settings_popover(text)
+        settings_popover(text, lang)
         st.markdown(
             f'<div class="pcos-box accent"><h4>ℹ️ {text["why_title"]}</h4>'
             f'<p>{text["why_body"]}</p></div>'
@@ -443,34 +447,38 @@ def sidebar(text):
             unsafe_allow_html=True)
 
 
-PREF_KEYS = ("language", "theme", "text_size")
 PREF_DEFAULTS = {"language": "English", "theme": "System", "text_size": "Normal"}
 
 
-def remember_prefs():
-    saved = st.session_state.setdefault("_prefs", dict(PREF_DEFAULTS))
-    for key in PREF_KEYS:
-        if key in st.session_state:
-            saved[key] = st.session_state[key]
+def prefs():
+    """The user's display choices, kept outside the widgets so a language change
+    can never reset them."""
+    return st.session_state.setdefault("_prefs", dict(PREF_DEFAULTS))
 
 
-def restore_prefs():
-    saved = st.session_state.setdefault("_prefs", dict(PREF_DEFAULTS))
-    for key in PREF_KEYS:
-        if key not in st.session_state:
-            st.session_state[key] = saved.get(key, PREF_DEFAULTS[key])
+def _saver(pref, widget_key):
+    def save():
+        prefs()[pref] = st.session_state[widget_key]
+    return save
 
 
-def settings_popover(text):
+def settings_popover(text, lang):
+    saved = prefs()
+    languages = list(LANGUAGES)
+    themes = ["System", "Light", "Dark"]
+    sizes = ["Normal", "Large"]
     with st.popover("⚙️ Settings", use_container_width=True):
         st.markdown(f"**{text['language']}**")
-        st.radio("language_choice", list(LANGUAGES), key="language", on_change=remember_prefs,
+        st.radio("language_choice", languages, index=languages.index(saved["language"]),
+                 key="language_widget", on_change=_saver("language", "language_widget"),
                  label_visibility="collapsed", format_func=lambda v: "🌐 " + v)
         st.markdown(f"**{text['theme']}**")
-        st.radio("theme_choice", ["System", "Light", "Dark"], key="theme", on_change=remember_prefs,
+        st.radio("theme_choice", themes, index=themes.index(saved["theme"]),
+                 key=f"theme_widget_{lang}", on_change=_saver("theme", f"theme_widget_{lang}"),
                  label_visibility="collapsed", format_func=lambda v: text["theme_" + v])
         st.markdown(f"**{text['text_size']}**")
-        st.radio("size_choice", ["Normal", "Large"], key="text_size", on_change=remember_prefs,
+        st.radio("size_choice", sizes, index=sizes.index(saved["text_size"]),
+                 key=f"size_widget_{lang}", on_change=_saver("text_size", f"size_widget_{lang}"),
                  label_visibility="collapsed", format_func=lambda v: text["size_" + v])
 
 
@@ -518,11 +526,10 @@ def main():
     st.set_page_config(page_title="PCOS Risk Screening", page_icon="🩺", layout="wide")
     st.markdown(STYLE, unsafe_allow_html=True)
 
-    restore_prefs()
-    lang = LANGUAGES.get(st.session_state["language"], "en")
+    lang = LANGUAGES.get(prefs()["language"], "en")
     text = TEXT[lang]
     apply_display_settings()
-    sidebar(text)
+    sidebar(text, lang)
     model = load_model()
 
     st.markdown(
