@@ -235,6 +235,15 @@ STYLE = """
     margin-top: 4px; }
 .pcos-verdict.low { background: rgba(5, 150, 105, 0.16); border: 1px solid #059669; }
 .pcos-verdict.high { background: rgba(225, 29, 72, 0.14); border: 1px solid #e11d48; }
+.pcos-error { display: flex; align-items: center; gap: 12px; padding: 13px 16px; margin: 0;
+    border-radius: 12px; border: 1px solid #f87171; border-left: 6px solid #dc2626;
+    background: linear-gradient(100deg, #fecaca, #fee2e2); font-weight: 600;
+    box-shadow: 0 1px 4px rgba(220, 38, 38, 0.25); }
+.pcos-error, .pcos-error span { color: #7f1d1d !important; }
+.pcos-error .pcos-error-icon { color: #ffffff !important; }
+.pcos-error-icon { flex: none; width: 24px; height: 24px; border-radius: 50%; background: #dc2626;
+    color: #ffffff !important; font-weight: 800; display: inline-flex; align-items: center;
+    justify-content: center; font-size: 0.95rem; }
 .pcos-guide-row { display: flex; align-items: flex-start; gap: 10px; margin: 8px 0; }
 .pcos-guide-row > div { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .pcos-guide-row b { font-size: 0.9rem; }
@@ -666,7 +675,8 @@ def main():
         if errors:
             st.session_state.pop("last_inputs", None)
             for message in errors:
-                st.error(message)
+                st.markdown(f'<div class="pcos-error"><span class="pcos-error-icon">!</span>'
+                            f'<span>{message}</span></div>', unsafe_allow_html=True)
         else:
             show_result(model, text, payload["age"], bmi, payload["testosterone"],
                         payload["follicle_count"], payload["menstrual"], warnings)
