@@ -235,6 +235,7 @@ STYLE = """
     margin-top: 4px; }
 .pcos-verdict.low { background: rgba(5, 150, 105, 0.16); border: 1px solid #059669; }
 .pcos-verdict.high { background: rgba(225, 29, 72, 0.14); border: 1px solid #e11d48; }
+.pcos-error-list { display: flex; flex-direction: column; gap: 10px; margin: 4px 0 12px 0; }
 .pcos-error { display: flex; align-items: center; gap: 12px; padding: 13px 16px; margin: 0;
     border-radius: 12px; border: 1px solid #f87171; border-left: 6px solid #dc2626;
     background: linear-gradient(100deg, #fecaca, #fee2e2); font-weight: 600;
@@ -674,9 +675,10 @@ def main():
             payload["follicle_count"], payload["menstrual"], lang)
         if errors:
             st.session_state.pop("last_inputs", None)
-            for message in errors:
-                st.markdown(f'<div class="pcos-error"><span class="pcos-error-icon">!</span>'
-                            f'<span>{message}</span></div>', unsafe_allow_html=True)
+            boxes = "".join(
+                f'<div class="pcos-error"><span class="pcos-error-icon">!</span>'
+                f'<span>{message}</span></div>' for message in errors)
+            st.markdown(f'<div class="pcos-error-list">{boxes}</div>', unsafe_allow_html=True)
         else:
             show_result(model, text, payload["age"], bmi, payload["testosterone"],
                         payload["follicle_count"], payload["menstrual"], warnings)
