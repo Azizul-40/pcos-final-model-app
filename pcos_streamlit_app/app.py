@@ -235,9 +235,11 @@ STYLE = """
     margin-top: 4px; }
 .pcos-verdict.low { background: rgba(5, 150, 105, 0.16); border: 1px solid #059669; }
 .pcos-verdict.high { background: rgba(225, 29, 72, 0.14); border: 1px solid #e11d48; }
-.pcos-guide-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; font-size: 0.84rem; }
-.pcos-guide-row b { min-width: 64px; }
-.pcos-swatch { width: 34px; height: 16px; border-radius: 5px; flex: none; }
+.pcos-guide-row { display: flex; align-items: flex-start; gap: 10px; margin: 8px 0; }
+.pcos-guide-row > div { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.pcos-guide-row b { font-size: 0.9rem; }
+.pcos-guide-text { font-size: 0.82rem; line-height: 1.35; }
+.pcos-swatch { width: 34px; height: 16px; border-radius: 5px; flex: none; margin-top: 3px; }
 .pcos-prob { font-size: 2.1rem; font-weight: 700; line-height: 1.1; }
 .pcos-result { display: grid; grid-template-columns: 2fr 3fr; gap: 12px; align-items: stretch;
     margin: 4px 0 12px 0; }
@@ -246,6 +248,14 @@ STYLE = """
 .pcos-tiles .pcos-tile { box-sizing: border-box; min-height: 74px; }
 .pcos-verdict, .pcos-verdict * { color: var(--fg); }
 @media (max-width: 760px) { .pcos-result, .pcos-tiles { grid-template-columns: 1fr; } }
+@media (max-width: 640px) {
+    [data-testid="stMainBlockContainer"], .block-container { padding: 3rem 0.8rem 1rem 0.8rem; }
+    .pcos-hero { padding: 12px 14px; }
+    .pcos-hero h1 { font-size: 1.3rem; }
+    .pcos-hero p { font-size: 0.85rem; }
+    .pcos-verdict { font-size: 1.05rem; padding: 14px 16px; }
+    .pcos-prob { font-size: 1.8rem; }
+}
 .pcos-gauge { position: relative; height: 14px; border-radius: 999px; margin: 14px 0 6px 0;
     background: linear-gradient(90deg, #10b981 0%, #f59e0b 50%, #e11d48 100%); }
 .pcos-marker { position: absolute; top: -5px; width: 6px; height: 24px; border-radius: 3px;
@@ -479,7 +489,8 @@ def risk_guide_html(text):
         background, border = risk_style(middle)
         rows += (f'<div class="pcos-guide-row"><span class="pcos-swatch" '
                  f'style="background:{background};border:1px solid {border}"></span>'
-                 f'<b>{low}–{high}%</b><span>{text["band" + str(number)]}</span></div>')
+                 f'<div><b>{low}–{high}%</b>'
+                 f'<div class="pcos-guide-text">{text["band" + str(number)]}</div></div></div>')
     return (f'<div class="pcos-box accent"><h4>🎯 {text["guide_title"]}</h4>{rows}'
             f'<p>{text["guide_note"]}</p></div>')
 
@@ -588,7 +599,8 @@ def show_result(model, text, age, bmi, testosterone, follicle_count, menstrual, 
 
 
 def main():
-    st.set_page_config(page_title="PCOS Risk Screening", page_icon="🩺", layout="wide")
+    st.set_page_config(page_title="PCOS Risk Screening", page_icon="🩺", layout="wide",
+                       initial_sidebar_state="auto")
     st.markdown(STYLE, unsafe_allow_html=True)
 
     lang = LANGUAGES.get(prefs()["language"], "en")
