@@ -1198,11 +1198,21 @@ html {{ font-size: {scale}; }}
 .stApp [data-baseweb="select"] svg {{ fill: var(--fg) !important; }}
 .stApp [data-testid="stNumberInput"] button {{ background: var(--btn) !important; color: var(--fg) !important; border: none !important; }}
 .stApp [data-testid="stNumberInput"] button svg {{ fill: var(--fg) !important; }}
-.stApp [data-testid="stButton"] button[data-testid="stBaseButton-primary"] {{
-    background: linear-gradient(120deg, #4f46e5, #9333ea) !important; border: none !important; }}
-.stApp [data-testid="stButton"] button[data-testid="stBaseButton-primary"],
-.stApp [data-testid="stButton"] button[data-testid="stBaseButton-primary"] * {{
-    color: #ffffff !important; font-weight: 700 !important; }}
+.st-key-navrow {{ border-bottom: 1px solid rgba(127,127,127,0.35); margin-bottom: 4px; }}
+.st-key-navrow [data-testid="stHorizontalBlock"] {{ gap: 0.2rem; flex-wrap: nowrap !important; }}
+.st-key-navrow [data-testid="stColumn"] {{ min-width: 0 !important; }}
+.stApp .st-key-navrow [data-testid="stButton"] button {{ background: transparent !important;
+    border: none !important; border-bottom: 3px solid transparent !important;
+    border-radius: 0 !important; box-shadow: none !important; min-height: 0;
+    padding: 0.35rem 0.5rem !important; }}
+.stApp .st-key-navrow [data-testid="stButton"] button,
+.stApp .st-key-navrow [data-testid="stButton"] button * {{ color: var(--fg) !important;
+    font-weight: 600 !important; white-space: nowrap; }}
+.stApp .st-key-navrow [data-testid="stButton"] button[data-testid="stBaseButton-primary"] {{
+    border-bottom-color: #6366f1 !important; }}
+.stApp .st-key-navrow [data-testid="stButton"] button[data-testid="stBaseButton-primary"],
+.stApp .st-key-navrow [data-testid="stButton"] button[data-testid="stBaseButton-primary"] * {{
+    color: #6366f1 !important; }}
 [data-testid="stFileUploaderDropzone"] {{ background: var(--field) !important;
     border: 1px dashed var(--border) !important; border-radius: 12px !important; }}
 [data-testid="stFileUploaderDropzone"], [data-testid="stFileUploaderDropzone"] *,
@@ -1615,9 +1625,11 @@ def main():
 
     view = st.session_state.setdefault("view", "pred")
     pages = (("pred", text["tab_pred"]), ("csv", text["tab_csv"]), ("report", text["tab_report"]))
-    for column, (key, label) in zip(st.columns(3), pages):
-        column.button(label, key=f"nav_{key}", on_click=_go, args=(key,),
-                      type="primary" if view == key else "secondary", use_container_width=True)
+    with st.container(key="navrow"):
+        for column, (key, label) in zip(st.columns([1, 1, 1.25, 3]), pages):
+            column.button(label, key=f"nav_{key}", on_click=_go, args=(key,),
+                          type="primary" if view == key else "secondary",
+                          use_container_width=True)
 
     if view == "csv":
         show_csv_tab(text, lang, model)
