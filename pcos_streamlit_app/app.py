@@ -1011,9 +1011,7 @@ def build_report(lang, payload, result, by_input):
 
 CSV_ROW_LIMIT = 5000
 
-CSV_TEMPLATE = ("Age,Weight,Height,Testosterone,Antral follicle count,Menstrual cycle\n"
-                "28,62,160,55,14,Regular\n"
-                "24,70,158,95,28,Irregular\n")
+CSV_TEMPLATE = "Age,Weight,Height,Testosterone,Antral follicle count,Menstrual cycle\n"
 
 
 def _key(name):
@@ -1192,6 +1190,17 @@ html {{ font-size: {scale}; }}
 .stApp [data-baseweb="select"] svg {{ fill: var(--fg) !important; }}
 .stApp [data-testid="stNumberInput"] button {{ background: var(--btn) !important; color: var(--fg) !important; border: none !important; }}
 .stApp [data-testid="stNumberInput"] button svg {{ fill: var(--fg) !important; }}
+[data-testid="stFileUploaderDropzone"] {{ background: var(--field) !important;
+    border: 1px dashed var(--border) !important; border-radius: 12px !important; }}
+[data-testid="stFileUploaderDropzone"], [data-testid="stFileUploaderDropzone"] *,
+[data-testid="stFileUploaderFile"] * {{ color: var(--fg) !important; }}
+[data-testid="stFileUploaderDropzone"] button {{ background: var(--btn) !important;
+    border: 1px solid var(--border) !important; border-radius: 10px !important; }}
+[data-testid="stFileUploaderDropzone"] button * {{ color: var(--fg) !important; }}
+.stApp [data-testid="stDownloadButton"] button {{ background: var(--field) !important;
+    border: 1px solid var(--border) !important; border-radius: 10px !important; }}
+.stApp [data-testid="stDownloadButton"] button, .stApp [data-testid="stDownloadButton"] button * {{
+    color: var(--fg) !important; }}
 [data-testid="stToolbar"], [data-testid="stSidebarCollapseButton"],
 [data-testid="stExpandSidebarButton"] {{ filter: var(--icon); }}
 [data-testid="stToolbar"] *, [data-testid="stSidebarCollapseButton"] *,
