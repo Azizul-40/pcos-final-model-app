@@ -1390,9 +1390,9 @@ def show_csv_tab(text, lang, model):
     st.markdown(
         f'<div class="pcos-box accent"><h4>📄 {text["csv_title"]}</h4>'
         f'<p>{text["csv_help"]}</p></div>', unsafe_allow_html=True)
+    st.markdown('<div style="height:12px"></div>', unsafe_allow_html=True)
     st.download_button(text["csv_template"], data=CSV_TEMPLATE.encode("utf-8"),
-                       file_name="PCOS_input_template.csv", mime="text/csv",
-                       use_container_width=True)
+                       file_name="PCOS_input_template.csv", mime="text/csv")
     st.markdown('<div style="height:6px"></div>', unsafe_allow_html=True)
     uploaded = st.file_uploader(text["csv_upload"], type=["csv"],
                                 key=f"csv_file_{st.session_state.get('csv_n', 0)}")
