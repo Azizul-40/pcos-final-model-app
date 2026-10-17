@@ -177,6 +177,7 @@ TEXT = {
         "csv_summary": "{ok} rows predicted, {bad} rows need checking.",
         "csv_ignored": "Ignored columns: {cols}.",
         "csv_download": "Download results (CSV)",
+        "csv_clear": "Delete file and results",
         "col_row": "Row", "col_prob": "PCOS probability (%)", "col_band": "Risk level",
         "col_note": "Note", "invalid": "Check input",
         "cycle_bad": "Menstrual cycle must be Regular or Irregular (or 0/1).",
@@ -336,6 +337,7 @@ TEXT = {
         "csv_summary": "{ok}টা row-এর পূর্বাভাস হয়েছে, {bad}টা row যাচাই করতে হবে।",
         "csv_ignored": "বাদ দেওয়া column: {cols}।",
         "csv_download": "ফলাফল ডাউনলোড (CSV)",
+        "csv_clear": "ফাইল ও ফলাফল মুছুন",
         "col_row": "Row", "col_prob": "PCOS সম্ভাব্যতা (%)", "col_band": "ঝুঁকির স্তর",
         "col_note": "মন্তব্য", "invalid": "তথ্য যাচাই করুন",
         "cycle_bad": "মাসিক চক্র অবশ্যই নিয়মিত বা অনিয়মিত (অথবা 0/1) হতে হবে।",
@@ -1197,9 +1199,10 @@ html {{ font-size: {scale}; }}
 [data-testid="stFileUploaderDropzone"] button {{ background: var(--btn) !important;
     border: 1px solid var(--border) !important; border-radius: 10px !important; }}
 [data-testid="stFileUploaderDropzone"] button * {{ color: var(--fg) !important; }}
-.stApp [data-testid="stDownloadButton"] button {{ background: var(--field) !important;
+.stApp [data-testid="stDownloadButton"] button, .stApp [data-testid="stButton"] button {{ background: var(--field) !important;
     border: 1px solid var(--border) !important; border-radius: 10px !important; }}
-.stApp [data-testid="stDownloadButton"] button, .stApp [data-testid="stDownloadButton"] button * {{
+.stApp [data-testid="stDownloadButton"] button, .stApp [data-testid="stDownloadButton"] button *,
+.stApp [data-testid="stButton"] button, .stApp [data-testid="stButton"] button * {{
     color: var(--fg) !important; }}
 [data-testid="stToolbar"], [data-testid="stSidebarCollapseButton"],
 [data-testid="stExpandSidebarButton"] {{ filter: var(--icon); }}
@@ -1377,13 +1380,22 @@ def show_report_tab(text, lang, payload):
                        mime="application/pdf", use_container_width=True)
 
 
+def _clear_csv():
+    """Remove the uploaded file and its results (a new uploader key empties the box)."""
+    st.session_state["csv_n"] = st.session_state.get("csv_n", 0) + 1
+    st.session_state.pop("csv_result", None)
+
+
 def show_csv_tab(text, lang, model):
     st.markdown(
         f'<div class="pcos-box accent"><h4>📄 {text["csv_title"]}</h4>'
         f'<p>{text["csv_help"]}</p></div>', unsafe_allow_html=True)
     st.download_button(text["csv_template"], data=CSV_TEMPLATE.encode("utf-8"),
-                       file_name="PCOS_input_template.csv", mime="text/csv")
-    uploaded = st.file_uploader(text["csv_upload"], type=["csv"], key="csv_file")
+                       file_name="PCOS_input_template.csv", mime="text/csv",
+                       use_container_width=True)
+    st.markdown('<div style="height:6px"></div>', unsafe_allow_html=True)
+    uploaded = st.file_uploader(text["csv_upload"], type=["csv"],
+                                key=f"csv_file_{st.session_state.get('csv_n', 0)}")
     if uploaded is None:
         st.session_state.pop("csv_result", None)
         return
@@ -1404,7 +1416,10 @@ def show_csv_tab(text, lang, model):
         st.error(text["csv_toobig"].format(n=len(frame), limit=CSV_ROW_LIMIT))
         return
     file_id = (uploaded.name, len(raw), lang)
-    if st.button(text["csv_predict"], use_container_width=True, key="csv_go"):
+    go_col, clear_col = st.columns([3, 1])
+    clear_col.button("🗑 " + text["csv_clear"], on_click=_clear_csv, use_container_width=True,
+                     key="csv_clear_top")
+    if go_col.button(text["csv_predict"], use_container_width=True, key="csv_go"):
         table, missing, ignored = predict_table(frame, lang, model)
         st.session_state["csv_result"] = (file_id, table, missing, ignored)
     saved = st.session_state.get("csv_result")
@@ -1419,8 +1434,13 @@ def show_csv_tab(text, lang, model):
     if ignored:
         st.caption(text["csv_ignored"].format(cols=", ".join(map(str, ignored))))
     st.dataframe(table, use_container_width=True, hide_index=True)
-    st.download_button(text["csv_download"], data=table.to_csv(index=False).encode("utf-8-sig"),
-                       file_name="PCOS_predictions.csv", mime="text/csv")
+    save_col, delete_col = st.columns([3, 1])
+    save_col.download_button(text["csv_download"],
+                             data=table.to_csv(index=False).encode("utf-8-sig"),
+                             file_name="PCOS_predictions.csv", mime="text/csv",
+                             use_container_width=True)
+    delete_col.button("🗑 " + text["csv_clear"], on_click=_clear_csv, use_container_width=True,
+                      key="csv_clear_bottom")
 
 
 def main():
