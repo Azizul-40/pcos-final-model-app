@@ -489,8 +489,9 @@ div[data-testid="stFormSubmitButton"] button:hover { filter: brightness(1.1); co
 [data-testid="stForm"] { border: none !important; padding: 0 !important; }
 [data-testid="stVerticalBlockBorderWrapper"] { border-radius: 12px; padding: 0.4rem 0.2rem 0.2rem 0.2rem; }
 .pcos-hero, .pcos-waiting, .pcos-box { width: 100%; box-sizing: border-box; }
+[data-testid="stAppViewContainer"] { max-width: 1120px; margin-left: auto; margin-right: auto; }
 [data-testid="stMainBlockContainer"], .block-container {
-    padding: 2.6rem 1.2rem 0.8rem 1rem; max-width: 740px; margin-left: 0; margin-right: auto; }
+    padding: 2.6rem 1.2rem 0.8rem 1rem; max-width: none; margin: 0; }
 [data-testid="stVerticalBlock"] { gap: 0.45rem; }
 [data-testid="stTabs"] button[role="tab"] { font-weight: 600; padding: 0.35rem 0.9rem; }
 [data-testid="stSidebar"] .pcos-box { background: var(--card); border: 1px solid var(--border);
