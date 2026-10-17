@@ -178,6 +178,9 @@ TEXT = {
         "csv_ignored": "Ignored columns: {cols}.",
         "csv_download": "Download results (CSV)",
         "csv_clear": "Delete file and results",
+        "csv_row_pick": "Row to open in the Prediction page",
+        "csv_open": "Open in Prediction page",
+        "csv_loaded": "Row {n} of your CSV file is loaded below. Check the values, then press Predict.",
         "col_row": "Row", "col_prob": "PCOS probability (%)", "col_band": "Risk level",
         "col_note": "Note", "invalid": "Check input",
         "cycle_bad": "Menstrual cycle must be Regular or Irregular (or 0/1).",
@@ -338,6 +341,9 @@ TEXT = {
         "csv_ignored": "বাদ দেওয়া column: {cols}।",
         "csv_download": "ফলাফল ডাউনলোড (CSV)",
         "csv_clear": "ফাইল ও ফলাফল মুছুন",
+        "csv_row_pick": "যে row পূর্বাভাস পেজে খুলবেন",
+        "csv_open": "পূর্বাভাস পেজে নিয়ে যান",
+        "csv_loaded": "আপনার CSV ফাইলের {n} নম্বর row নিচে বসানো হয়েছে। মানগুলো দেখে Predict চাপুন।",
         "col_row": "Row", "col_prob": "PCOS সম্ভাব্যতা (%)", "col_band": "ঝুঁকির স্তর",
         "col_note": "মন্তব্য", "invalid": "তথ্য যাচাই করুন",
         "cycle_bad": "মাসিক চক্র অবশ্যই নিয়মিত বা অনিয়মিত (অথবা 0/1) হতে হবে।",
@@ -1192,6 +1198,11 @@ html {{ font-size: {scale}; }}
 .stApp [data-baseweb="select"] svg {{ fill: var(--fg) !important; }}
 .stApp [data-testid="stNumberInput"] button {{ background: var(--btn) !important; color: var(--fg) !important; border: none !important; }}
 .stApp [data-testid="stNumberInput"] button svg {{ fill: var(--fg) !important; }}
+.stApp [data-testid="stButton"] button[data-testid="stBaseButton-primary"] {{
+    background: linear-gradient(120deg, #4f46e5, #9333ea) !important; border: none !important; }}
+.stApp [data-testid="stButton"] button[data-testid="stBaseButton-primary"],
+.stApp [data-testid="stButton"] button[data-testid="stBaseButton-primary"] * {{
+    color: #ffffff !important; font-weight: 700 !important; }}
 [data-testid="stFileUploaderDropzone"] {{ background: var(--field) !important;
     border: 1px dashed var(--border) !important; border-radius: 12px !important; }}
 [data-testid="stFileUploaderDropzone"], [data-testid="stFileUploaderDropzone"] *,
@@ -1380,10 +1391,56 @@ def show_report_tab(text, lang, payload):
                        mime="application/pdf", use_container_width=True)
 
 
+FORM_KEYS = ("age", "weight", "height", "menstrual", "testosterone", "follicles")
+
+
 def _clear_csv():
     """Remove the uploaded file and its results (a new uploader key empties the box)."""
     st.session_state["csv_n"] = st.session_state.get("csv_n", 0) + 1
     st.session_state.pop("csv_result", None)
+    st.session_state.pop("csv_auto", None)
+
+
+def _go(view):
+    st.session_state["view"] = view
+
+
+def rows_to_inputs(frame):
+    """The rows of an uploaded table as form values (None where a value is missing)."""
+    mapping, _, _ = match_columns(frame.columns)
+    if any(key not in mapping for key in ("age", "testosterone", "afc", "menstrual")):
+        return None
+    rows = []
+    for _, row in frame.iterrows():
+        def pick(key):
+            return _number(row[mapping[key]]) if key in mapping else None
+        rows.append({"age": pick("age"), "weight": pick("weight"), "height": pick("height"),
+                     "testosterone": pick("testosterone"), "follicles": pick("afc"),
+                     "menstrual": parse_cycle(row[mapping["menstrual"]])})
+    return rows
+
+
+def _fill_form(values, number):
+    """Put one row of the CSV into the Prediction form and switch to that page."""
+    state = st.session_state
+
+    def fit(value, label, whole):
+        if value is None or not np.isfinite(value):
+            return None
+        low, high, _ = HARD_LIMITS[label]
+        if not low <= value <= high:
+            return None
+        return int(round(value)) if whole else float(value)
+
+    state["age"] = fit(values["age"], "Age", True)
+    state["weight"] = fit(values["weight"], "Weight", False)
+    state["height"] = fit(values["height"], "Height", False)
+    state["testosterone"] = fit(values["testosterone"], "Testosterone", False)
+    state["follicles"] = fit(values["follicles"], "Antral follicle count", True)
+    state["menstrual"] = values["menstrual"] if values["menstrual"] in MENSTRUAL_CHOICES else None
+    state.pop("last_inputs", None)
+    state["loaded_row"] = number
+    state["view"] = "pred"
 
 
 def show_csv_tab(text, lang, model):
@@ -1416,6 +1473,18 @@ def show_csv_tab(text, lang, model):
         st.error(text["csv_toobig"].format(n=len(frame), limit=CSV_ROW_LIMIT))
         return
     file_id = (uploaded.name, len(raw), lang)
+    inputs = rows_to_inputs(frame)
+    if inputs and len(inputs) == 1 and st.session_state.get("csv_auto") != file_id:
+        st.session_state["csv_auto"] = file_id
+        _fill_form(inputs[0], 1)
+        st.rerun()
+    if inputs and len(inputs) > 1:
+        pick_col, open_col = st.columns([3, 1])
+        number = pick_col.selectbox(text["csv_row_pick"], list(range(1, len(inputs) + 1)),
+                                    key="csv_pick")
+        open_col.markdown('<div style="height:1.9rem"></div>', unsafe_allow_html=True)
+        open_col.button(text["csv_open"], on_click=_fill_form, args=(inputs[number - 1], number),
+                        use_container_width=True, key="csv_open_btn")
     go_col, clear_col = st.columns([3, 1])
     clear_col.button("🗑 " + text["csv_clear"], on_click=_clear_csv, use_container_width=True,
                      key="csv_clear_top")
@@ -1443,10 +1512,96 @@ def show_csv_tab(text, lang, model):
                       key="csv_clear_bottom")
 
 
+def show_prediction_page(text, lang, model):
+    loaded = st.session_state.pop("loaded_row", None)
+    if loaded:
+        st.success(text["csv_loaded"].format(n=loaded))
+    with st.form("patient_form"):
+        with st.container(border=True):
+            pill(text["basic"])
+            col_age, col_weight, col_height = st.columns(3)
+            a, w, h = (HARD_LIMITS[k] for k in ("Age", "Weight", "Height"))
+            age = col_age.number_input(
+                text["age"], value=None, min_value=int(a[0]), max_value=int(a[1]), step=1,
+                format="%d", placeholder=f"{a[0]:g}–{a[1]:g}", key="age")
+            weight = col_weight.number_input(
+                text["weight"], value=None, min_value=w[0], max_value=w[1], step=0.1,
+                format="%.1f", placeholder=f"{w[0]:g}–{w[1]:g}", key="weight")
+            height = col_height.number_input(
+                text["height"], value=None, min_value=h[0], max_value=h[1], step=0.1,
+                format="%.1f", placeholder=f"{h[0]:g}–{h[1]:g}", key="height")
+        with st.container(border=True):
+            pill(text["clinical"])
+            col_cycle, col_testosterone, col_follicles = st.columns(3)
+            menstrual = col_cycle.selectbox(
+                text["menstrual"], list(MENSTRUAL_CHOICES), index=None,
+                format_func=lambda key: text[key], placeholder=text["select"], key="menstrual")
+            t = HARD_LIMITS["Testosterone"]
+            f = HARD_LIMITS["Antral follicle count"]
+            testosterone = col_testosterone.number_input(
+                text["testosterone"], value=None, min_value=t[0], max_value=t[1], step=0.1,
+                format="%.1f", placeholder=f"{t[0]:g}–{t[1]:g}", key="testosterone")
+            follicle_count = col_follicles.number_input(
+                text["afc"], value=None, min_value=int(f[0]), max_value=int(f[1]), step=1,
+                format="%d", placeholder=f"{f[0]:g}–{f[1]:g}", key="follicles")
+        submitted = st.form_submit_button(text["predict"], use_container_width=True)
+
+    entered = dict(age=age, weight=weight, height=height, testosterone=testosterone,
+                   follicle_count=follicle_count, menstrual=menstrual)
+    if submitted:
+        st.session_state["last_inputs"] = entered
+    payload = st.session_state.get("last_inputs")
+
+    if payload is None:
+        st.markdown(
+            f'<div class="pcos-waiting"><div class="ico">🩺</div>'
+            f'<h3>{text["wait_title"]}</h3><p>{text["waiting"]}</p>'
+            f'<div class="pcos-steps"><span class="pcos-step"><i>1</i>{text["step1"]}</span>'
+            f'<span class="pcos-arrow">→</span>'
+            f'<span class="pcos-step"><i>2</i>{text["step2"]}</span>'
+            f'<span class="pcos-arrow">→</span>'
+            f'<span class="pcos-step"><i>3</i>{text["step3"]}</span></div></div>',
+            unsafe_allow_html=True)
+    else:
+        errors, warnings, bmi = validate_inputs(
+            payload["age"], payload["weight"], payload["height"], payload["testosterone"],
+            payload["follicle_count"], payload["menstrual"], lang)
+        if errors:
+            st.session_state.pop("last_inputs", None)
+            boxes = "".join(
+                f'<div class="pcos-error"><span class="pcos-error-icon">!</span>'
+                f'<span>{message}</span></div>' for message in errors)
+            st.markdown(f'<div class="pcos-error-list">{boxes}</div>', unsafe_allow_html=True)
+        else:
+            result = compute_result(model, payload, bmi, warnings)
+            explanation = explain(payload["age"], bmi, payload["testosterone"],
+                                  payload["follicle_count"], payload["menstrual"])
+            by_input = aggregate_by_input(explanation) if explanation else None
+            show_result(text, lang, payload, result, by_input)
+
+    st.markdown(
+        f'<div class="pcos-box warn" style="margin-top:8px"><p>⚠️ '
+        f'{text["disclaimer_body"]}</p></div>', unsafe_allow_html=True)
+
+
+def current_payload(lang):
+    """The last submitted inputs if they are valid (used by the report page)."""
+    payload = st.session_state.get("last_inputs")
+    if payload is None:
+        return None
+    errors, _, _ = validate_inputs(
+        payload["age"], payload["weight"], payload["height"], payload["testosterone"],
+        payload["follicle_count"], payload["menstrual"], lang)
+    return None if errors else payload
+
+
 def main():
     st.set_page_config(page_title="PCOS Risk Screening", page_icon="🩺", layout="wide",
                        initial_sidebar_state="auto")
     st.markdown(STYLE, unsafe_allow_html=True)
+    for key in FORM_KEYS:  # keep typed values when the page is switched
+        if key in st.session_state:
+            st.session_state[key] = st.session_state[key]
 
     lang = LANGUAGES.get(prefs()["language"], "en")
     text = TEXT[lang]
@@ -1458,84 +1613,18 @@ def main():
         f'<div class="pcos-hero"><h1>🩺 {TEXT["en"]["title"]}</h1><p>{text["subtitle"]}</p></div>',
         unsafe_allow_html=True)
 
-    tab_predict, tab_csv, tab_report = st.tabs(
-        [text["tab_pred"], text["tab_csv"], text["tab_report"]])
-    report_payload = None
+    view = st.session_state.setdefault("view", "pred")
+    pages = (("pred", text["tab_pred"]), ("csv", text["tab_csv"]), ("report", text["tab_report"]))
+    for column, (key, label) in zip(st.columns(3), pages):
+        column.button(label, key=f"nav_{key}", on_click=_go, args=(key,),
+                      type="primary" if view == key else "secondary", use_container_width=True)
 
-    with tab_predict:
-        with st.form("patient_form"):
-            with st.container(border=True):
-                pill(text["basic"])
-                col_age, col_weight, col_height = st.columns(3)
-                a, w, h = (HARD_LIMITS[k] for k in ("Age", "Weight", "Height"))
-                age = col_age.number_input(
-                    text["age"], value=None, min_value=int(a[0]), max_value=int(a[1]), step=1,
-                    format="%d", placeholder=f"{a[0]:g}–{a[1]:g}", key="age")
-                weight = col_weight.number_input(
-                    text["weight"], value=None, min_value=w[0], max_value=w[1], step=0.1,
-                    format="%.1f", placeholder=f"{w[0]:g}–{w[1]:g}", key="weight")
-                height = col_height.number_input(
-                    text["height"], value=None, min_value=h[0], max_value=h[1], step=0.1,
-                    format="%.1f", placeholder=f"{h[0]:g}–{h[1]:g}", key="height")
-            with st.container(border=True):
-                pill(text["clinical"])
-                col_cycle, col_testosterone, col_follicles = st.columns(3)
-                menstrual = col_cycle.selectbox(
-                    text["menstrual"], list(MENSTRUAL_CHOICES), index=None,
-                    format_func=lambda key: text[key], placeholder=text["select"], key="menstrual")
-                t = HARD_LIMITS["Testosterone"]
-                f = HARD_LIMITS["Antral follicle count"]
-                testosterone = col_testosterone.number_input(
-                    text["testosterone"], value=None, min_value=t[0], max_value=t[1], step=0.1,
-                    format="%.1f", placeholder=f"{t[0]:g}–{t[1]:g}", key="testosterone")
-                follicle_count = col_follicles.number_input(
-                    text["afc"], value=None, min_value=int(f[0]), max_value=int(f[1]), step=1,
-                    format="%d", placeholder=f"{f[0]:g}–{f[1]:g}", key="follicles")
-            submitted = st.form_submit_button(text["predict"], use_container_width=True)
-
-        entered = dict(age=age, weight=weight, height=height, testosterone=testosterone,
-                       follicle_count=follicle_count, menstrual=menstrual)
-        if submitted:
-            st.session_state["last_inputs"] = entered
-        payload = st.session_state.get("last_inputs")
-
-        if payload is None:
-            st.markdown(
-                f'<div class="pcos-waiting"><div class="ico">🩺</div>'
-                f'<h3>{text["wait_title"]}</h3><p>{text["waiting"]}</p>'
-                f'<div class="pcos-steps"><span class="pcos-step"><i>1</i>{text["step1"]}</span>'
-                f'<span class="pcos-arrow">→</span>'
-                f'<span class="pcos-step"><i>2</i>{text["step2"]}</span>'
-                f'<span class="pcos-arrow">→</span>'
-                f'<span class="pcos-step"><i>3</i>{text["step3"]}</span></div></div>',
-                unsafe_allow_html=True)
-        else:
-            errors, warnings, bmi = validate_inputs(
-                payload["age"], payload["weight"], payload["height"], payload["testosterone"],
-                payload["follicle_count"], payload["menstrual"], lang)
-            if errors:
-                st.session_state.pop("last_inputs", None)
-                boxes = "".join(
-                    f'<div class="pcos-error"><span class="pcos-error-icon">!</span>'
-                    f'<span>{message}</span></div>' for message in errors)
-                st.markdown(f'<div class="pcos-error-list">{boxes}</div>', unsafe_allow_html=True)
-            else:
-                result = compute_result(model, payload, bmi, warnings)
-                explanation = explain(payload["age"], bmi, payload["testosterone"],
-                                      payload["follicle_count"], payload["menstrual"])
-                by_input = aggregate_by_input(explanation) if explanation else None
-                show_result(text, lang, payload, result, by_input)
-                report_payload = payload
-
-        st.markdown(
-            f'<div class="pcos-box warn" style="margin-top:8px"><p>⚠️ '
-            f'{text["disclaimer_body"]}</p></div>', unsafe_allow_html=True)
-
-    with tab_csv:
+    if view == "csv":
         show_csv_tab(text, lang, model)
-
-    with tab_report:
-        show_report_tab(text, lang, report_payload)
+    elif view == "report":
+        show_report_tab(text, lang, current_payload(lang))
+    else:
+        show_prediction_page(text, lang, model)
 
 
 if __name__ == "__main__":
