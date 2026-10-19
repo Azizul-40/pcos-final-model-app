@@ -476,6 +476,7 @@ STYLE = """
 .pcos-rec .avoid h5 { color: #e11d48; }
 .pcos-rec .src { font-size: 0.78rem; margin-top: 6px; line-height: 1.45; opacity: 0.95; }
 .pcos-rec .src a { color: #6366f1; text-decoration: underline; }
+[data-testid="InputInstructions"] { display: none !important; }
 @media (max-width: 640px) {
     [data-testid="stMainBlockContainer"], .block-container { padding: 3rem 0.8rem 1rem 0.8rem; }
     .pcos-hero { padding: 12px 14px; }
@@ -484,6 +485,12 @@ STYLE = """
     .pcos-rec-cols { grid-template-columns: 1fr; }
     .pcos-xr { grid-template-columns: 1fr auto; }
     .pcos-xr .pcos-xtrack { grid-column: 1 / -1; }
+    .st-key-basic_cols [data-testid="stHorizontalBlock"],
+    .st-key-clinical_cols [data-testid="stHorizontalBlock"] {
+        flex-wrap: wrap !important; row-gap: 0.6rem; }
+    .st-key-basic_cols [data-testid="stColumn"],
+    .st-key-clinical_cols [data-testid="stColumn"] {
+        min-width: 100% !important; flex: 1 1 100% !important; }
 }
 div[data-testid="stFormSubmitButton"] button {
     background: linear-gradient(120deg, #4f46e5, #9333ea); color: #ffffff; border: none;
@@ -1187,7 +1194,7 @@ html {{ font-size: {scale}; }}
 .stApp [data-baseweb="select"] > div {{
     background: var(--field) !important; color: var(--fg) !important; }}
 [data-baseweb="input"], [data-testid="stNumberInputContainer"], .stApp [data-baseweb="select"] > div {{
-    border: 1px solid var(--border) !important; border-radius: 10px !important; overflow: hidden; }}
+    border: 1px solid var(--border) !important; border-radius: 10px !important; }}
 [data-baseweb="input"]:focus-within, [data-testid="stNumberInputContainer"]:focus-within {{
     border-color: #4f46e5 !important; box-shadow: 0 0 0 2px rgba(79,70,229,0.25); }}
 .stApp input {{ background: var(--field) !important; color: var(--fg) !important;
@@ -1529,31 +1536,33 @@ def show_prediction_page(text, lang, model):
     with st.form("patient_form"):
         with st.container(border=True):
             pill(text["basic"])
-            col_age, col_weight, col_height = st.columns(3)
-            a, w, h = (HARD_LIMITS[k] for k in ("Age", "Weight", "Height"))
-            age = col_age.number_input(
-                text["age"], value=None, min_value=int(a[0]), max_value=int(a[1]), step=1,
-                format="%d", placeholder=f"{a[0]:g}–{a[1]:g}", key="age")
-            weight = col_weight.number_input(
-                text["weight"], value=None, min_value=w[0], max_value=w[1], step=0.1,
-                format="%.1f", placeholder=f"{w[0]:g}–{w[1]:g}", key="weight")
-            height = col_height.number_input(
-                text["height"], value=None, min_value=h[0], max_value=h[1], step=0.1,
-                format="%.1f", placeholder=f"{h[0]:g}–{h[1]:g}", key="height")
+            with st.container(key="basic_cols"):
+                col_age, col_weight, col_height = st.columns(3)
+                a, w, h = (HARD_LIMITS[k] for k in ("Age", "Weight", "Height"))
+                age = col_age.number_input(
+                    text["age"], value=None, min_value=int(a[0]), max_value=int(a[1]), step=1,
+                    format="%d", placeholder=f"{a[0]:g}–{a[1]:g}", key="age")
+                weight = col_weight.number_input(
+                    text["weight"], value=None, min_value=w[0], max_value=w[1], step=0.1,
+                    format="%.1f", placeholder=f"{w[0]:g}–{w[1]:g}", key="weight")
+                height = col_height.number_input(
+                    text["height"], value=None, min_value=h[0], max_value=h[1], step=0.1,
+                    format="%.1f", placeholder=f"{h[0]:g}–{h[1]:g}", key="height")
         with st.container(border=True):
             pill(text["clinical"])
-            col_cycle, col_testosterone, col_follicles = st.columns(3)
-            menstrual = col_cycle.selectbox(
-                text["menstrual"], list(MENSTRUAL_CHOICES), index=None,
-                format_func=lambda key: text[key], placeholder=text["select"], key="menstrual")
-            t = HARD_LIMITS["Testosterone"]
-            f = HARD_LIMITS["Antral follicle count"]
-            testosterone = col_testosterone.number_input(
-                text["testosterone"], value=None, min_value=t[0], max_value=t[1], step=0.1,
-                format="%.1f", placeholder=f"{t[0]:g}–{t[1]:g}", key="testosterone")
-            follicle_count = col_follicles.number_input(
-                text["afc"], value=None, min_value=int(f[0]), max_value=int(f[1]), step=1,
-                format="%d", placeholder=f"{f[0]:g}–{f[1]:g}", key="follicles")
+            with st.container(key="clinical_cols"):
+                col_cycle, col_testosterone, col_follicles = st.columns(3)
+                menstrual = col_cycle.selectbox(
+                    text["menstrual"], list(MENSTRUAL_CHOICES), index=None,
+                    format_func=lambda key: text[key], placeholder=text["select"], key="menstrual")
+                t = HARD_LIMITS["Testosterone"]
+                f = HARD_LIMITS["Antral follicle count"]
+                testosterone = col_testosterone.number_input(
+                    text["testosterone"], value=None, min_value=t[0], max_value=t[1], step=0.1,
+                    format="%.1f", placeholder=f"{t[0]:g}–{t[1]:g}", key="testosterone")
+                follicle_count = col_follicles.number_input(
+                    text["afc"], value=None, min_value=int(f[0]), max_value=int(f[1]), step=1,
+                    format="%d", placeholder=f"{f[0]:g}–{f[1]:g}", key="follicles")
         submitted = st.form_submit_button(text["predict"], use_container_width=True)
 
     entered = dict(age=age, weight=weight, height=height, testosterone=testosterone,
@@ -1588,10 +1597,6 @@ def show_prediction_page(text, lang, model):
                                   payload["follicle_count"], payload["menstrual"])
             by_input = aggregate_by_input(explanation) if explanation else None
             show_result(text, lang, payload, result, by_input)
-
-    st.markdown(
-        f'<div class="pcos-box warn" style="margin-top:8px"><p>⚠️ '
-        f'{text["disclaimer_body"]}</p></div>', unsafe_allow_html=True)
 
 
 def current_payload(lang):
